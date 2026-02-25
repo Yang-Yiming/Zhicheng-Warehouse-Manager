@@ -60,6 +60,15 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 - [x] Organizations list: add / remove, synced via `configUpdate`
 - [x] Operators list: add / remove, synced via `configUpdate`
 
+## Phase 6.4: Operation Form UI Redesign ✓
+
+- [x] Replace operation type `<picker>` with segmented control (入库 green / 出库 orange)
+- [x] Replace quantity `<input>` with stepper (−/+ buttons + inline input, min 1)
+- [x] Restructure layout into card sections (操作类型 / 信息 / 物资 / 数量 / 时间)
+- [x] Page background `#f2f3f7`, card border-radius 16rpx, picker rows with `›` arrow
+- [x] Submit button color follows operation type (green for 入库, orange for 出库)
+- [x] Replace `onOperationChange` with `onSelectOperation`; add `onQuantityStep`
+
 ## Phase 5: Polish & Extras
 
 - Operation audit log (monthly logs viewable in-app)

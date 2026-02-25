@@ -17,6 +17,7 @@ Page({
     timeValue: '',
     submitting: false,
     locked: false,
+    maxQuantity: null,
     OPERATIONS,
   },
 
@@ -36,6 +37,7 @@ Page({
     }
 
     this.setData(updates)
+    if (updates['form.operation'] === '出库') this._fetchMaxQuantity()
     app.onLoginReady(user => this.setData({ operatorName: user.displayName }))
     this._loadConfig()
     this._initDateTime()
@@ -60,17 +62,37 @@ Page({
   },
 
   onItemIdInput(e) { this.setData({ 'form.itemId': e.detail.value }) },
+  onItemIdBlur() { if (this.data.form.operation === '出库') this._fetchMaxQuantity() },
   onItemNameInput(e) { this.setData({ 'form.itemName': e.detail.value }) },
   onQuantityInput(e) { this.setData({ 'form.quantity': e.detail.value }) },
 
-  onOperationChange(e) {
-    const idx = Number(e.detail.value)
-    this.setData({ operationIndex: idx, 'form.operation': OPERATIONS[idx] })
+  onSelectOperation(e) {
+    const op = e.currentTarget.dataset.op
+    const idx = OPERATIONS.indexOf(op)
+    this.setData({ operationIndex: idx, 'form.operation': op })
+    if (op === '出库') this._fetchMaxQuantity()
+    else this.setData({ maxQuantity: null })
+  },
+
+  onQuantityStep(e) {
+    const delta = Number(e.currentTarget.dataset.delta)
+    const cur = Number(this.data.form.quantity) || 0
+    const { maxQuantity } = this.data
+    const max = maxQuantity !== null ? maxQuantity : Infinity
+    const next = Math.min(max, Math.max(1, cur + delta))
+    this.setData({ 'form.quantity': String(next) })
+  },
+
+  onQuantityMin() { this.setData({ 'form.quantity': '1' }) },
+  onQuantityMax() {
+    const { maxQuantity } = this.data
+    if (maxQuantity !== null) this.setData({ 'form.quantity': String(maxQuantity) })
   },
 
   onOrgChange(e) {
     const idx = Number(e.detail.value)
     this.setData({ orgIndex: idx, 'form.organization': this.data.organizations[idx] })
+    if (this.data.form.operation === '出库') this._fetchMaxQuantity()
   },
 
   onDateChange(e) {
@@ -81,6 +103,17 @@ Page({
   onTimeChange(e) {
     const timeValue = e.detail.value
     this.setData({ timeValue, 'form.operationTime': `${this.data.dateValue} ${timeValue}` })
+  },
+
+  async _fetchMaxQuantity() {
+    const { form } = this.data
+    if (!form.itemId || !form.organization) { this.setData({ maxQuantity: null }); return }
+    try {
+      const { data } = await db.collection('inventory').where({ itemId: form.itemId, organization: form.organization }).limit(1).get()
+      this.setData({ maxQuantity: data.length > 0 ? data[0].quantity : null })
+    } catch {
+      this.setData({ maxQuantity: null })
+    }
   },
 
   async _resolveOperation(userOp, itemId, organization) {
@@ -126,7 +159,7 @@ Page({
     this.setData({
       'form.itemId': '', 'form.itemName': '', 'form.operation': '',
       'form.organization': '', 'form.quantity': '',
-      operationIndex: -1, orgIndex: -1,
+      operationIndex: -1, orgIndex: -1, maxQuantity: null,
     })
   },
 })

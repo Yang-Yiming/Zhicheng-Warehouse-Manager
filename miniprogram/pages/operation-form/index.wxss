@@ -1,11 +1,42 @@
-.page { background: #f5f5f5; min-height: 100vh; padding: 24rpx; }
-.form { background: #fff; border-radius: 16rpx; padding: 0 24rpx; }
-.field { display: flex; align-items: center; padding: 28rpx 0; border-bottom: 1rpx solid #f0f0f0; }
-.field:last-child { border-bottom: none; }
+.page { background: #f2f3f7; min-height: 100vh; padding: 24rpx; }
+
+.card { background: #fff; border-radius: 16rpx; margin-bottom: 20rpx; padding: 0 32rpx; }
+
+/* Segmented control */
+.seg-card { padding: 24rpx 32rpx; }
+.seg-group { display: flex; gap: 20rpx; }
+.seg-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 28rpx 0; border-radius: 12rpx; border: 2rpx solid #ddd; }
+.seg-icon { font-size: 40rpx; color: #999; }
+.seg-label { font-size: 30rpx; color: #999; margin-top: 8rpx; font-weight: 500; }
+.seg-in.active { background: #4caf50; border-color: #4caf50; }
+.seg-out.active { background: #ff7043; border-color: #ff7043; }
+.seg-in.active .seg-icon, .seg-in.active .seg-label { color: #fff; }
+.seg-out.active .seg-icon, .seg-out.active .seg-label { color: #fff; }
+
+/* Fields */
+.field { display: flex; align-items: center; padding: 28rpx 0; border-bottom: 1rpx solid #f5f5f5; }
+.field.no-border { border-bottom: none; }
 .label { width: 160rpx; font-size: 28rpx; color: #333; flex-shrink: 0; }
 .label.required::after { content: ' *'; color: #f44336; }
 .readonly { flex: 1; font-size: 28rpx; color: #999; }
+.field-val { flex: 1; }
 .input { flex: 1; font-size: 28rpx; color: #333; }
+
+/* Picker */
+.picker-wrap { flex: 1; }
+.picker-row { display: flex; align-items: center; }
 .picker-val { flex: 1; font-size: 28rpx; color: #333; }
 .picker-val.placeholder { color: #bbb; }
-.submit-btn { margin-top: 40rpx; background: #1976d2; color: #fff; border-radius: 12rpx; font-size: 32rpx; border: none; }
+.arrow { font-size: 36rpx; color: #bbb; margin-left: 8rpx; }
+
+/* Stepper */
+.stepper { display: flex; align-items: center; flex: 1; justify-content: flex-end; }
+.stepper-btn { width: 56rpx; height: 56rpx; border-radius: 50%; border: 1rpx solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 36rpx; color: #333; }
+.stepper-btn.disabled { opacity: 0.3; }
+.stepper-edge { width: 72rpx; font-size: 22rpx; letter-spacing: 0; }
+.stepper-input { width: 100rpx; text-align: center; font-size: 32rpx; color: #333; margin: 0 16rpx; }
+
+/* Submit button */
+.submit-btn { margin-top: 20rpx; width: 100%; height: 96rpx; line-height: 96rpx; border-radius: 48rpx; font-size: 32rpx; border: none; color: #fff; }
+.btn-in { background: #4caf50; }
+.btn-out { background: #ff7043; }
