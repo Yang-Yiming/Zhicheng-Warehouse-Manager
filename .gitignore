@@ -2,3 +2,4 @@ node_modules/
 private.*.key
 preview-qrcode.jpg
 old_python/
+project.private.config.json
