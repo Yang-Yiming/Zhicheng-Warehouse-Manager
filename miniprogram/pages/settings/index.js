@@ -11,6 +11,7 @@ Page({
     newOrg: '',
     userOrgs: [],
     availableOrgs: [],
+    editingOrgs: false,
   },
 
   onLoad() {
@@ -79,6 +80,9 @@ Page({
       this._updateAvailable()
     }).catch(err => showError(err.message || '网络错误'))
   },
+
+  onEditOrgs() { this.setData({ editingOrgs: true }) },
+  onDoneOrgs() { this.setData({ editingOrgs: false }) },
 
   // --- All organizations ---
   onNewOrgInput(e) { this.setData({ newOrg: e.detail.value }) },
