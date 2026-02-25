@@ -8,7 +8,7 @@
       <view class="card">
         <view class="card-row main-row">
           <text class="item-name">{{item.itemName}}</text>
-          <text class="op-tag op-{{item.operation}}">{{item.operation}}</text>
+          <text class="op-tag op-{{item.opClass}}">{{item.operation}}</text>
           <text class="qty">×{{item.quantity}}</text>
         </view>
         <view class="card-row sub-row">

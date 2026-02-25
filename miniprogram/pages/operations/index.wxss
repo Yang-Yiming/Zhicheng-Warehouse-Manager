@@ -8,10 +8,11 @@
 .main-row { gap: 12rpx; }
 .item-name { font-size: 32rpx; font-weight: 600; flex: 1; color: #222; }
 .op-tag { font-size: 22rpx; padding: 4rpx 14rpx; border-radius: 8rpx; color: #fff; flex-shrink: 0; }
-.op-入库 { background: #4caf50; }
-.op-出库 { background: #f44336; }
-.op-物资增添 { background: #2196f3; }
-.op-部分出库 { background: #ff9800; }
+.op-in { background: #4caf50; }
+.op-out { background: #f44336; }
+.op-add { background: #2196f3; }
+.op-partial { background: #ff9800; }
+.op-other { background: #9e9e9e; }
 .qty { font-size: 28rpx; color: #333; flex-shrink: 0; }
 .sub-row { gap: 8rpx; flex-wrap: wrap; }
 .sub { font-size: 24rpx; color: #666; }

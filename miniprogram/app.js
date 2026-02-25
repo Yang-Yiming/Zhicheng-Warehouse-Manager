@@ -14,19 +14,39 @@ App({
   },
 
   _doLogin() {
+    console.log('[Login] wx.login 开始')
     wx.login({
-      success: () => {
-        wx.cloud.callFunction({ name: 'userLogin' }).then(res => {
-          const { success, isNew, user } = res.result
-          if (!success) { this._showRetry(); return }
-          if (isNew || !user.displayName) {
-            wx.navigateTo({ url: '/pages/profile-setup/index' })
-          } else {
-            this._setLoginReady(user)
-          }
-        }).catch(() => this._showRetry())
+      success: (loginRes) => {
+        console.log('[Login] wx.login 成功, code:', loginRes.code ? '已获取' : '无code')
+        console.log('[Login] 调用云函数 userLogin...')
+        wx.cloud.callFunction({ name: 'userLogin' })
+          .then(res => {
+            console.log('[Login] 云函数返回:', JSON.stringify(res.result))
+            const { success, isNew, user } = res.result
+            if (!success) {
+              console.error('[Login] 云函数返回 success=false')
+              this._showRetry()
+              return
+            }
+            console.log('[Login] 登录成功, isNew:', isNew, 'displayName:', user.displayName)
+            if (isNew || !user.displayName) {
+              wx.navigateTo({ url: '/pages/profile-setup/index' })
+            } else {
+              this._setLoginReady(user)
+            }
+          })
+          .catch(err => {
+            console.error('[Login] 云函数调用失败:', err)
+            console.error('[Login] errMsg:', err && err.errMsg)
+            console.error('[Login] errCode:', err && err.errCode)
+            this._showRetry()
+          })
       },
-      fail: () => this._showRetry(),
+      fail: (err) => {
+        console.error('[Login] wx.login 失败:', err)
+        console.error('[Login] errMsg:', err && err.errMsg)
+        this._showRetry()
+      },
     })
   },
 

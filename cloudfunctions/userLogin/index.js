@@ -7,10 +7,18 @@ const db = cloud.database()
 exports.main = async () => {
   const { OPENID } = cloud.getWXContext()
   const col = db.collection('users')
-  const { data } = await col.where({ openid: OPENID }).get()
 
-  if (data.length > 0) {
-    const user = data[0]
+  let existing = []
+  try {
+    const { data } = await col.where({ openid: OPENID }).get()
+    existing = data
+  } catch (e) {
+    // collection may not exist yet on first run — proceed to create user
+    if (!String(e).includes('-502005')) throw e
+  }
+
+  if (existing.length > 0) {
+    const user = existing[0]
     return { success: true, isNew: !user.displayName, user: { openid: user.openid, displayName: user.displayName || '' } }
   }
 
