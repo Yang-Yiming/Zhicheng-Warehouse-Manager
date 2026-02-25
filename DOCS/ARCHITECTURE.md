@@ -37,7 +37,8 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 │   ├── configGet/                         # Return config doc; seed defaults on first run
 │   ├── configUpdate/                      # Update organizations/operators list
 │   ├── userLogin/                         # Lookup-or-create user by openid on app launch
-│   └── userSetProfile/                    # Save display name (max 20 chars) for logged-in user
+│   ├── userSetProfile/                    # Save display name (max 20 chars) for logged-in user
+│   └── userSetOrgs/                       # Update user's personal organizations list
 ├── scripts/
 │   └── sync-local-config.js              # Sync APPID from .env.local into project.config.json
 └── DOCS/
@@ -51,6 +52,7 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
   "_id": "auto",
   "openid": "oXXXX...",
   "displayName": "张三",
+  "organizations": ["学生会", "团委"],
   "createdAt": "2026-02-25T06:00:00Z",
   "updatedAt": "2026-02-25T06:00:00Z"
 }

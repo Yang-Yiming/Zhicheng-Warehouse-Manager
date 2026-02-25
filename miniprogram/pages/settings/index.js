@@ -9,10 +9,16 @@ Page({
     nameInput: '',
     config: { organizations: [] },
     newOrg: '',
+    userOrgs: [],
+    availableOrgs: [],
   },
 
   onLoad() {
-    app.onLoginReady(user => this.setData({ displayName: user.displayName }))
+    app.onLoginReady(user => {
+      const userOrgs = Array.isArray(user.organizations) ? user.organizations : []
+      this.setData({ displayName: user.displayName, userOrgs })
+      this._updateAvailable()
+    })
     this._loadConfig()
   },
 
@@ -23,10 +29,17 @@ Page({
         this.setData({
           config: {
             organizations: Array.isArray(config.organizations) ? config.organizations : [],
-            },
+          },
         })
+        this._updateAvailable()
       })
       .catch(() => showError('配置加载失败'))
+  },
+
+  _updateAvailable() {
+    const all = this.data.config.organizations
+    const mine = this.data.userOrgs
+    this.setData({ availableOrgs: all.filter(o => !mine.includes(o)) })
   },
 
   // --- Display name ---
@@ -45,7 +58,29 @@ Page({
     }).catch(err => showError(err.message || '网络错误'))
   },
 
-  // --- Organizations ---
+  // --- User organizations ---
+  onAddUserOrg(e) {
+    const org = this.data.availableOrgs[Number(e.detail.value)]
+    if (!org) return
+    const userOrgs = [...this.data.userOrgs, org]
+    callCloud('userSetOrgs', { organizations: userOrgs }).then(() => {
+      app.globalData.currentUser.organizations = userOrgs
+      this.setData({ userOrgs })
+      this._updateAvailable()
+    }).catch(err => showError(err.message || '网络错误'))
+  },
+
+  onRemoveUserOrg(e) {
+    const idx = e.currentTarget.dataset.idx
+    const userOrgs = this.data.userOrgs.filter((_, i) => i !== idx)
+    callCloud('userSetOrgs', { organizations: userOrgs }).then(() => {
+      app.globalData.currentUser.organizations = userOrgs
+      this.setData({ userOrgs })
+      this._updateAvailable()
+    }).catch(err => showError(err.message || '网络错误'))
+  },
+
+  // --- All organizations ---
   onNewOrgInput(e) { this.setData({ newOrg: e.detail.value }) },
 
   onAddOrg() {
@@ -55,13 +90,19 @@ Page({
       showError('已存在'); return
     }
     const organizations = [...this.data.config.organizations, name]
-    this._saveConfig({ organizations }, () => this.setData({ 'config.organizations': organizations, newOrg: '' }))
+    this._saveConfig({ organizations }, () => {
+      this.setData({ 'config.organizations': organizations, newOrg: '' })
+      this._updateAvailable()
+    })
   },
 
   onRemoveOrg(e) {
     const idx = e.currentTarget.dataset.idx
     const organizations = this.data.config.organizations.filter((_, i) => i !== idx)
-    this._saveConfig({ organizations }, () => this.setData({ 'config.organizations': organizations }))
+    this._saveConfig({ organizations }, () => {
+      this.setData({ 'config.organizations': organizations })
+      this._updateAvailable()
+    })
   },
 
   _saveConfig(patch, onSuccess) {

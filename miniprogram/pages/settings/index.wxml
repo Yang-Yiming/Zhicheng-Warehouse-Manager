@@ -18,6 +18,20 @@
   <view class="section-title">所属组织</view>
   <view class="card">
     <view class="tag-list">
+      <view wx:for="{{userOrgs}}" wx:key="*this" class="tag">
+        <text>{{item}}</text>
+        <text class="tag-del" bindtap="onRemoveUserOrg" data-idx="{{index}}">×</text>
+      </view>
+    </view>
+    <picker wx:if="{{availableOrgs.length > 0}}" range="{{availableOrgs}}" bindchange="onAddUserOrg">
+      <text class="action-btn">+ 添加</text>
+    </picker>
+    <text wx:else class="empty-hint">已加入全部组织</text>
+  </view>
+
+  <view class="section-title">全部组织</view>
+  <view class="card">
+    <view class="tag-list">
       <view wx:for="{{config.organizations}}" wx:key="*this" class="tag">
         <text>{{item}}</text>
         <text class="tag-del" bindtap="onRemoveOrg" data-idx="{{index}}">×</text>

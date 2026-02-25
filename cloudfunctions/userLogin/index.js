@@ -8,6 +8,7 @@ function formatUser(user) {
   return {
     openid: user.openid,
     displayName: String(user.displayName || ''),
+    organizations: Array.isArray(user.organizations) ? user.organizations : [],
   }
 }
 

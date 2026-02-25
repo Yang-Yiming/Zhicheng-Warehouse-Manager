@@ -38,8 +38,16 @@ Page({
 
     this.setData(updates)
     if (updates['form.operation'] === '出库') this._fetchMaxQuantity()
-    app.onLoginReady(user => this.setData({ operatorName: user.displayName }))
-    this._loadConfig()
+    app.onLoginReady(user => {
+      this.setData({ operatorName: user.displayName })
+      const orgs = Array.isArray(user.organizations) ? user.organizations : []
+      if (orgs.length > 0 && !isLocked) {
+        this.setData({ organizations: orgs, orgIndex: 0, 'form.organization': orgs[0] })
+        if (updates['form.operation'] === '出库') this._fetchMaxQuantity()
+      } else {
+        this.setData({ organizations: orgs })
+      }
+    })
     this._initDateTime()
   },
 
@@ -49,16 +57,6 @@ Page({
     const dateValue = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
     const timeValue = `${pad(now.getHours())}:${pad(now.getMinutes())}`
     this.setData({ dateValue, timeValue, 'form.operationTime': `${dateValue} ${timeValue}` })
-  },
-
-  _loadConfig() {
-    callCloud('configGet')
-      .then(result => {
-        const config = result.data || {}
-        const organizations = Array.isArray(config.organizations) ? config.organizations : []
-        this.setData({ organizations })
-      })
-      .catch(() => showError('配置加载失败'))
   },
 
   onItemIdInput(e) { this.setData({ 'form.itemId': e.detail.value }) },

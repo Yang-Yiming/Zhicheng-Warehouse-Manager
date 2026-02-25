@@ -75,6 +75,16 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 - [x] Remove operators list UI from settings page (operators are now resolved server-side from `users` collection; manual list is redundant)
 - [x] Settings page now manages: display name (我的信息) + organizations list only
 
+## Phase 6.6: User-Level Organizations ✓
+
+- [x] Add `organizations` field to `users` collection (user's personal org list)
+- [x] `userLogin` returns `organizations` in formatted user object
+- [x] New `userSetOrgs` cloud function — updates `organizations` on the logged-in user's record
+- [x] Settings page: rename "所属组织" → "全部组织"; add new "所属组织" section for personal org management
+- [x] Personal org picker shows only orgs not yet added; "全部组织" section unchanged
+- [x] `operation-form` org picker now uses user's personal `organizations` instead of global config
+- [x] Auto-fills first org on form load when user has ≥1 personal org (unless locked)
+
 ## v0.2.0
 
 ## Phase 5: Polish & Extras
