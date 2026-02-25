@@ -26,7 +26,10 @@ WeChat miniprogram architecture for the Warehouse Manager.
 │   │   └── sortable-list/                 # Sortable list view
 │   └── utils/
 │       ├── db.js                          # Cloud DB helpers
-│       └── validation.js                  # Input validation
+│       ├── validation.js                  # Input validation
+│       ├── cloud.js                       # Unified cloud function caller
+│       ├── search.js                      # Shared full-text filtering helper
+│       └── feedback.js                    # Shared user feedback helper (toast/modal)
 ├── cloudfunctions/
 │   ├── operationCreate/                   # Create operation + update inventory
 │   ├── inventoryRebuild/                  # Rebuild inventory from history
@@ -90,6 +93,8 @@ Note: `operator` and `submitter` are server-resolved from the `users` collection
 }
 ```
 
+Implementation note: cloud functions write config fields (`organizations`, `operators`) into `doc('settings')` without embedding `_id` inside `data`, to avoid first-run write failures during seeding/update.
+
 ## Data Flow
 
 ### Login Flow (app launch)
@@ -116,10 +121,12 @@ User fills form → validate on client → call cloud function operationCreate
 ### Inventory Rebuild
 ```
 Admin triggers rebuild → cloud function inventoryRebuild
-  → read all `operations` sorted by time
+  → paginated read of all `operations` sorted by time (avoid cloud DB default fetch limits)
   → replay operations sequentially to compute current state
   → replace entire `inventory` collection
 ```
+
+`inventoryList` also uses paginated reads to return full inventory data instead of a truncated first page.
 
 ## Key Design Decisions
 
@@ -127,3 +134,5 @@ Admin triggers rebuild → cloud function inventoryRebuild
 2. **Inventory as derived data** — inventory can always be rebuilt from operations, ensuring consistency
 3. **Cloud functions for heavy logic** — inventory rebuild runs server-side to avoid miniprogram performance limits
 4. **Single config document** — organizations and operators stored in one doc for simplicity; all users read the same config
+5. **Shared frontend utilities** — cloud function invocation and search filtering are centralized in `utils/cloud.js` and `utils/search.js` to reduce duplicated page logic
+6. **Consistent feedback UX** — common toast/modal behavior is centralized in `utils/feedback.js` to avoid repetitive per-page error handling code

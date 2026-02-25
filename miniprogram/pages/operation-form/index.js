@@ -1,4 +1,7 @@
 const app = getApp()
+const { callCloud } = require('../../utils/cloud')
+const { showError, showSuccess } = require('../../utils/feedback')
+const { validateOperation } = require('../../utils/validation')
 
 const OPERATIONS = ['入库', '出库', '物资增添', '部分出库']
 
@@ -30,9 +33,13 @@ Page({
   },
 
   _loadConfig() {
-    wx.cloud.callFunction({ name: 'configGet' }).then(res => {
-      if (res.result.success) this.setData({ organizations: res.result.data.organizations || [] })
-    })
+    callCloud('configGet')
+      .then(result => {
+        const config = result.data || {}
+        const organizations = Array.isArray(config.organizations) ? config.organizations : []
+        this.setData({ organizations })
+      })
+      .catch(() => showError('配置加载失败'))
   },
 
   onItemIdInput(e) { this.setData({ 'form.itemId': e.detail.value }) },
@@ -62,42 +69,29 @@ Page({
   onSubmit() {
     if (this.data.submitting) return
     const { form } = this.data
-    const errors = []
-    if (!form.itemId.trim()) errors.push('物资编号不能为空')
-    if (!form.itemName.trim()) errors.push('物品名称不能为空')
-    if (!form.operation) errors.push('请选择操作类型')
-    if (!form.organization) errors.push('请选择所属组织')
-    const qty = Number(form.quantity)
-    if (!form.quantity || !Number.isInteger(qty) || qty <= 0) errors.push('数量必须为正整数')
-    if (!form.operationTime) errors.push('请选择操作时间')
+    const payload = {
+      itemId: form.itemId.trim(),
+      itemName: form.itemName.trim(),
+      operation: form.operation,
+      organization: form.organization,
+      quantity: Number(form.quantity),
+      operationTime: form.operationTime,
+    }
+    const errors = validateOperation(payload)
 
     if (errors.length > 0) {
-      wx.showModal({ title: '请检查输入', content: errors[0], showCancel: false })
+      showError(errors[0], { modal: true, title: '请检查输入' })
       return
     }
 
     this.setData({ submitting: true })
-    wx.cloud.callFunction({
-      name: 'operationCreate',
-      data: {
-        itemId: form.itemId.trim(),
-        itemName: form.itemName.trim(),
-        operation: form.operation,
-        organization: form.organization,
-        quantity: qty,
-        operationTime: form.operationTime,
-      },
-    }).then(res => {
+    callCloud('operationCreate', payload).then(() => {
       this.setData({ submitting: false })
-      if (!res.result.success) {
-        wx.showModal({ title: '提交失败', content: res.result.error, showCancel: false })
-        return
-      }
-      wx.showToast({ title: '提交成功', icon: 'success' })
+      showSuccess('提交成功')
       this._resetForm()
-    }).catch(() => {
+    }).catch(err => {
       this.setData({ submitting: false })
-      wx.showToast({ title: '网络错误', icon: 'none' })
+      showError(err.message || '网络错误', { modal: true, title: '提交失败' })
     })
   },
 

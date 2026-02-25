@@ -31,8 +31,6 @@ function validateOperation(data) {
   check(required, data.itemName, '物品名称')
   check(required, data.operation, '物资操作')
   check(required, data.organization, '所属组织')
-  check(required, data.operator, '操作人')
-  check(required, data.submitter, '提交者')
   check(positiveInt, data.quantity, '物品数量')
 
   if (data.operationTime) {

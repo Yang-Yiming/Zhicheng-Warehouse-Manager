@@ -1,4 +1,5 @@
 // Cloud DB helpers
+const { callCloud } = require('./cloud')
 const db = wx.cloud.database()
 const _ = db.command
 
@@ -20,8 +21,8 @@ function getOperations(page = 1, pageSize = 20) {
 
 // Full inventory list sorted by itemId (via cloud function to bypass permission limits)
 function getInventory() {
-  return wx.cloud.callFunction({ name: 'inventoryList' })
-    .then(res => ({ data: res.result.data || [] }))
+  return callCloud('inventoryList')
+    .then(result => ({ data: result.data || [] }))
 }
 
 // Config document

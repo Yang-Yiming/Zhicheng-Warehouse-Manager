@@ -17,6 +17,16 @@ exports.main = async (event) => {
 
     return { success: true, data, total, page, pageSize }
   } catch (err) {
-    return { success: false, data: [], total: 0, error: err.message }
+    const message = String((err && err.message) || '')
+    const notFound = message.includes('collection') && message.includes('does not exist')
+
+    if (notFound) {
+      try {
+        await db.createCollection('operations')
+      } catch (_) { /* already exists */ }
+      return { success: true, data: [], total: 0, page: event.page || 1, pageSize: event.pageSize || 20 }
+    }
+
+    return { success: false, data: [], total: 0, error: message || '读取操作记录失败' }
   }
 }

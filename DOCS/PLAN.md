@@ -67,3 +67,32 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 - Permission / role management (if needed)
 - UI refinements, loading states, error handling
 - (Optional) Excel export for reporting if needed later
+
+## Phase 5.5: Maintainability Refactor ✓
+
+- [x] Add shared cloud function caller utility (`miniprogram/utils/cloud.js`) for unified success/error handling
+- [x] Add shared full-text search utility (`miniprogram/utils/search.js`) and apply to operations + inventory pages
+- [x] Refactor `operation-form` to reuse `utils/validation.validateOperation` instead of page-local duplicated validation
+- [x] Align frontend validation with current auth model (operator/submitter resolved server-side, no longer required client-side)
+- [x] Refactor settings/config calls to use shared cloud helper, reducing repeated boilerplate
+- [x] Refactor profile setup page to use shared cloud helper (`userSetProfile`)
+- [x] Fix cloud collection truncation bug by paginating reads in `inventoryList` and `inventoryRebuild`
+
+## Phase 5.6: Frontend Flow Unification ✓
+
+- [x] Refactor `app.js` login flow to use `utils/cloud.callCloud` for consistent cloud function handling
+- [x] Add shared feedback helper (`miniprogram/utils/feedback.js`) to unify toast/modal behavior
+- [x] Apply feedback helper in operations / inventory / operation-form / settings / profile-setup pages
+- [x] Reduce login flow noise by removing debug-heavy logs and simplifying retry branch handling
+
+## Phase 5.7: Config Load Stability ✓
+
+- [x] Fix `configGet` default seeding path to avoid writing `_id` into document payload
+- [x] Fix `configUpdate` missing-document fallback to use `doc('settings').set(...)` instead of `add`
+- [x] Ensure config cloud functions return successful payloads for first-run and empty-config scenarios
+
+## Phase 5.8: Empty Collection Graceful Fallback ✓
+
+- [x] Update `operationsList` to auto-create missing `operations` collection and return empty successful result
+- [x] Update `inventoryList` to auto-create missing `inventory` collection and return empty successful result
+- [x] Harden frontend config parsing in operation-form/settings when cloud payload is partially missing

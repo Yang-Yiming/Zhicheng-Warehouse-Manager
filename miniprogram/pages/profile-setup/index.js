@@ -1,4 +1,6 @@
 const app = getApp()
+const { callCloud } = require('../../utils/cloud')
+const { showError } = require('../../utils/feedback')
 
 Page({
   data: { displayName: '', loading: false, error: '' },
@@ -15,16 +17,14 @@ Page({
     if (name.length > 20) { this.setData({ error: '昵称不能超过20个字符' }); return }
 
     this.setData({ loading: true, error: '' })
-    wx.cloud.callFunction({ name: 'userSetProfile', data: { displayName: name } }).then(res => {
-      if (!res.result.success) {
-        this.setData({ loading: false, error: res.result.error || '保存失败' })
-        return
-      }
+    callCloud('userSetProfile', { displayName: name }).then(() => {
       const user = { ...app.globalData.currentUser, displayName: name, openid: (app.globalData.currentUser || {}).openid || '' }
       app._setLoginReady(user)
       wx.switchTab({ url: '/pages/operations/index' })
-    }).catch(() => {
-      this.setData({ loading: false, error: '网络错误，请重试' })
+    }).catch(err => {
+      const message = err.message || '网络错误，请重试'
+      this.setData({ loading: false, error: message })
+      showError(message)
     })
   },
 })

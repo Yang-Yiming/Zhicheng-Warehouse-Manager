@@ -18,7 +18,9 @@ exports.main = async (event) => {
     await db.collection('config').doc('settings').update({ data: update })
   } catch (e) {
     // Doc doesn't exist yet — create it
-    await db.collection('config').add({ data: { _id: 'settings', organizations: [], operators: [], ...update } })
+    await db.collection('config').doc('settings').set({
+      data: { organizations: [], operators: [], ...update }
+    })
   }
 
   return { success: true }

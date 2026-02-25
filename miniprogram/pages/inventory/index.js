@@ -1,4 +1,6 @@
 const { getInventory } = require('../../utils/db')
+const { showError } = require('../../utils/feedback')
+const { filterByQuery } = require('../../utils/search')
 
 Page({
   data: {
@@ -22,7 +24,7 @@ Page({
       .catch(() => {
         this.setData({ loading: false })
         wx.stopPullDownRefresh()
-        wx.showToast({ title: '加载失败', icon: 'none' })
+        showError('加载失败')
       })
   },
 
@@ -32,11 +34,10 @@ Page({
   },
 
   _applyFilter() {
-    const q = this.data.searchText.trim().toLowerCase()
-    if (!q) { this.setData({ filtered: this.data.inventory }); return }
-    const filtered = this.data.inventory.filter(item =>
-      [item.itemId, item.itemName, item.organization, item.lastOperator, item.lastOperation]
-        .some(v => v && String(v).toLowerCase().includes(q))
+    const filtered = filterByQuery(
+      this.data.inventory,
+      this.data.searchText,
+      ['itemId', 'itemName', 'organization', 'lastOperator', 'lastOperation']
     )
     this.setData({ filtered })
   },
