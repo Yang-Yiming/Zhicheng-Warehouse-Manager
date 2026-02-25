@@ -24,9 +24,8 @@ Page({
     roleLabel: '未认证',
     isAdmin: false,
     isChairman: false,
-    normalUsers: [],
+    allMembers: [],
     unverifiedUsers: [],
-    adminUsers: [],
   },
 
   onLoad() {
@@ -44,13 +43,13 @@ Page({
         isChairman,
       })
       this._updateAvailable()
-      if (isAdmin) this._loadUsers()
+      if (role !== 'unverified') this._loadUsers()
     })
     this._loadConfig()
   },
 
   onShow() {
-    if (this.data.isAdmin) this._loadUsers()
+    if (this.data.role !== 'unverified') this._loadUsers()
   },
 
   _loadConfig() {
@@ -66,13 +65,20 @@ Page({
   },
 
   _loadUsers() {
-    callCloud('userList', { roles: ['unverified', 'normal', 'admin'] })
-      .then(result => {
-        const users = result.data || []
+    const memberRoles = ['normal', 'admin', 'superadmin', 'chairman']
+    const promises = [callCloud('userList', { roles: memberRoles })]
+    if (this.data.isAdmin) {
+      promises.push(callCloud('userList', { roles: ['unverified'] }))
+    }
+    Promise.all(promises)
+      .then(([membersResult, unverifiedResult]) => {
+        const members = (membersResult.data || []).map(u => ({
+          ...u,
+          roleLabel: ROLE_LABELS[u.role] || u.role,
+        }))
         this.setData({
-          unverifiedUsers: users.filter(u => u.role === 'unverified'),
-          normalUsers: users.filter(u => u.role === 'normal'),
-          adminUsers: users.filter(u => u.role === 'admin'),
+          allMembers: members,
+          unverifiedUsers: unverifiedResult ? (unverifiedResult.data || []) : [],
         })
       })
       .catch(() => showError('用户列表加载失败'))

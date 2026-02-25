@@ -14,7 +14,7 @@ exports.main = async (event) => {
 
     const { data: callerData } = await db.collection('users').where({ openid: OPENID }).get()
     const callerRole = callerData.length > 0 ? (callerData[0].role || 'unverified') : 'unverified'
-    if (!ADMIN_ROLES.includes(callerRole)) {
+    if (callerRole === 'unverified') {
       return { success: false, error: '权限不足' }
     }
 

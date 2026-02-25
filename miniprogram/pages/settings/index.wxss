@@ -47,4 +47,6 @@
 .user-btn.promote { color: #fff; background: #ff9800; }
 .user-btn.demote { color: #fff; background: #f44336; }
 .user-btn.transfer { color: #fff; background: #9c27b0; }
+.user-name-row { display: flex; align-items: center; gap: 10rpx; }
+.badge-sm { font-size: 20rpx; padding: 2rpx 12rpx; }
 
