@@ -107,11 +107,14 @@
           </view>
           <text class="user-orgs">{{item.organizations.length > 0 ? item.organizations.join('、') : '无组织'}}</text>
         </view>
-        <view wx:if="{{isChairman}}" class="user-actions">
-          <text wx:if="{{item.role === 'normal'}}" class="user-btn promote" bindtap="onPromoteToAdmin" data-openid="{{item.openid}}" data-name="{{item.displayName}}">提拔</text>
-          <block wx:if="{{item.role === 'admin'}}">
-            <text class="user-btn demote" bindtap="onDemoteToNormal" data-openid="{{item.openid}}" data-name="{{item.displayName}}">降级</text>
-            <text class="user-btn transfer" bindtap="onTransferChairman" data-openid="{{item.openid}}" data-name="{{item.displayName}}">转让主席</text>
+        <view wx:if="{{isAdmin}}" class="user-actions">
+          <text wx:if="{{item.role === 'normal'}}" class="user-btn edit-orgs" bindtap="onEditUserOrgs" data-openid="{{item.openid}}" data-name="{{item.displayName}}">编辑组织</text>
+          <block wx:if="{{isChairman}}">
+            <text wx:if="{{item.role === 'normal'}}" class="user-btn promote" bindtap="onPromoteToAdmin" data-openid="{{item.openid}}" data-name="{{item.displayName}}">提拔</text>
+            <block wx:if="{{item.role === 'admin'}}">
+              <text class="user-btn demote" bindtap="onDemoteToNormal" data-openid="{{item.openid}}" data-name="{{item.displayName}}">降级</text>
+              <text class="user-btn transfer" bindtap="onTransferChairman" data-openid="{{item.openid}}" data-name="{{item.displayName}}">转让主席</text>
+            </block>
           </block>
         </view>
       </view>

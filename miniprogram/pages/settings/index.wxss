@@ -44,6 +44,7 @@
 .user-btn.approve { color: #fff; background: #4caf50; }
 .user-btn.dismiss { color: #666; background: #f0f0f0; }
 .user-btn.edit { color: #1976d2; background: #e3f2fd; }
+.user-btn.edit-orgs { color: #1976d2; background: #e3f2fd; }
 .user-btn.promote { color: #fff; background: #ff9800; }
 .user-btn.demote { color: #fff; background: #f44336; }
 .user-btn.transfer { color: #fff; background: #9c27b0; }
