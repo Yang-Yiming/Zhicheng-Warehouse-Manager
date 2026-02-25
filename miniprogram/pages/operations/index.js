@@ -1,0 +1,4 @@
+Page({
+  data: { operations: [] },
+  onLoad() {},
+})

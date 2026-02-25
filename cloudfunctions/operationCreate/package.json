@@ -1,0 +1,9 @@
+{
+  "name": "operationCreate",
+  "version": "1.0.0",
+  "description": "Create operation and update inventory",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

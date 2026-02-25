@@ -1,0 +1,24 @@
+{
+  "pages": [
+    "pages/operations/index",
+    "pages/inventory/index",
+    "pages/operation-form/index",
+    "pages/settings/index"
+  ],
+  "tabBar": {
+    "list": [
+      { "pagePath": "pages/operations/index",     "text": "操作记录" },
+      { "pagePath": "pages/inventory/index",      "text": "当前库存" },
+      { "pagePath": "pages/operation-form/index", "text": "新建操作" },
+      { "pagePath": "pages/settings/index",       "text": "设置" }
+    ]
+  },
+  "window": {
+    "navigationBarTitleText": "仓库管理",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundTextStyle": "light"
+  },
+  "sitemapLocation": "sitemap.json",
+  "cloud": true
+}
