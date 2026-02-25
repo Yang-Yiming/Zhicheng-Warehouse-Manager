@@ -20,8 +20,9 @@ exports.main = async () => {
     const { data } = await db.collection('config').doc('settings').get()
     return { success: true, data }
   } catch (e) {
-    // Document doesn't exist yet — seed with defaults
-    await db.collection('config').add({ data: DEFAULT_CONFIG })
+    // Collection or document doesn't exist — create collection then seed defaults
+    try { await db.createCollection('config') } catch (_) { /* already exists */ }
+    await db.collection('config').doc('settings').set({ data: DEFAULT_CONFIG })
     return { success: true, data: DEFAULT_CONFIG }
   }
 }

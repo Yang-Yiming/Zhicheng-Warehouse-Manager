@@ -18,11 +18,10 @@ function getOperations(page = 1, pageSize = 20) {
     .get()
 }
 
-// Full inventory list sorted by itemId
+// Full inventory list sorted by itemId (via cloud function to bypass permission limits)
 function getInventory() {
-  return collections.inventory
-    .orderBy('itemId', 'asc')
-    .get()
+  return wx.cloud.callFunction({ name: 'inventoryList' })
+    .then(res => ({ data: res.result.data || [] }))
 }
 
 // Config document

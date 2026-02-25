@@ -7,8 +7,7 @@ This project tries to turn an old python project into wechat-miniprogram.
 
 # Tooling Preferences
 
-- Prefer **miniprogram-ci** for upload/preview/build tasks over the WeChat DevTools GUI
-- Docs: https://developers.weixin.qq.com/miniprogram/dev/devtools/ci.html
+- Use **微信开发者工具** for upload, preview, and cloud function deployment
 
 # DOCS
 
