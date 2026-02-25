@@ -96,3 +96,13 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 - [x] Update `operationsList` to auto-create missing `operations` collection and return empty successful result
 - [x] Update `inventoryList` to auto-create missing `inventory` collection and return empty successful result
 - [x] Harden frontend config parsing in operation-form/settings when cloud payload is partially missing
+
+## Phase 5.9: Operation Submit First-Run Hardening ✓
+
+- [x] Update `operationCreate` to auto-create missing `users` / `inventory` / `operations` collections before query/write
+- [x] Add unified runtime error capture in `operationCreate` to return stable `success:false` payload instead of raw cloud exception
+
+## Phase 6.0: Cloud Error Compatibility Hardening ✓
+
+- [x] Update `operationsList` / `inventoryList` missing-collection detection to support `-502005`, `collection not exists`, and `Db or Table not exist`
+- [x] Update `inventoryRebuild` to auto-create missing `operations` / `inventory` collections and return stable success on first-run empty state

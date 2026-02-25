@@ -111,6 +111,7 @@ Pages call `app.onLoginReady(cb)` to receive the current user. If login is alrea
 ### Creating an Operation
 ```
 User fills form → validate on client → call cloud function operationCreate
+  → ensure `users`/`operations`/`inventory` collections exist (first-run bootstrap)
   → cloud.getWXContext() → OPENID
   → lookup users collection → resolve displayName
   → write to `operations` collection (operator/submitter = displayName, operatorOpenid = OPENID)
@@ -127,6 +128,8 @@ Admin triggers rebuild → cloud function inventoryRebuild
 ```
 
 `inventoryList` also uses paginated reads to return full inventory data instead of a truncated first page.
+
+Cloud functions handling collection bootstrap (`operationsList`, `inventoryList`, `operationCreate`, `inventoryRebuild`) treat CloudBase missing-collection errors via both error code (`-502005`) and message variants (`collection not exists`, `Db or Table not exist`, `does not exist`) because different runtimes return different wording.
 
 ## Key Design Decisions
 
