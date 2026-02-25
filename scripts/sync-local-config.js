@@ -4,6 +4,7 @@ const path = require('path')
 const root = path.resolve(__dirname, '..')
 const envPath = path.join(root, '.env.local')
 const configPath = path.join(root, 'project.config.json')
+const templatePath = path.join(root, 'project.config.template.json')
 
 function parseEnv(content) {
   const lines = content.split(/\r?\n/)
@@ -30,8 +31,13 @@ function parseEnv(content) {
 
 function main() {
   if (!fs.existsSync(configPath)) {
-    console.error('project.config.json 不存在')
-    process.exit(1)
+    if (!fs.existsSync(templatePath)) {
+      console.error('project.config.json 不存在，且 project.config.template.json 不存在')
+      process.exit(1)
+    }
+
+    fs.copyFileSync(templatePath, configPath)
+    console.log('已从 project.config.template.json 生成本地 project.config.json')
   }
 
   if (!fs.existsSync(envPath)) {

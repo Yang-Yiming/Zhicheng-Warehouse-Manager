@@ -111,3 +111,8 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 
 - [x] Add `.env.example` and ignore `.env.local` for local AppID management
 - [x] Add `npm run config:sync` script to sync `APPID` from `.env.local` into `project.config.json` before opening WeChat DevTools
+
+## Phase 6.2: Template-Based Project Config Hygiene ✓
+
+- [x] Track `project.config.template.json` with placeholder appid and gitignore local `project.config.json`
+- [x] Update `config:sync` script to bootstrap local `project.config.json` from template when missing
