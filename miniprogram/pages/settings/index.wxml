@@ -28,19 +28,4 @@
       <text class="action-btn" bindtap="onAddOrg">添加</text>
     </view>
   </view>
-
-  <view class="section-title">操作人列表</view>
-  <view class="card">
-    <view class="tag-list">
-      <view wx:for="{{config.operators}}" wx:key="*this" class="tag">
-        <text>{{item}}</text>
-        <text class="tag-del" bindtap="onRemoveOperator" data-idx="{{index}}">×</text>
-      </view>
-      <view wx:if="{{config.operators.length === 0}}" class="empty-hint">暂无操作人</view>
-    </view>
-    <view class="add-row">
-      <input class="input" placeholder="添加操作人" value="{{newOperator}}" bindinput="onNewOperatorInput" confirm-type="done" bindconfirm="onAddOperator" />
-      <text class="action-btn" bindtap="onAddOperator">添加</text>
-    </view>
-  </view>
 </view>

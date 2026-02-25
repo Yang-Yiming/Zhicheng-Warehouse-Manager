@@ -7,9 +7,8 @@ Page({
     displayName: '',
     editingName: false,
     nameInput: '',
-    config: { organizations: [], operators: [] },
+    config: { organizations: [] },
     newOrg: '',
-    newOperator: '',
   },
 
   onLoad() {
@@ -24,8 +23,7 @@ Page({
         this.setData({
           config: {
             organizations: Array.isArray(config.organizations) ? config.organizations : [],
-            operators: Array.isArray(config.operators) ? config.operators : [],
-          },
+            },
         })
       })
       .catch(() => showError('配置加载失败'))
@@ -64,25 +62,6 @@ Page({
     const idx = e.currentTarget.dataset.idx
     const organizations = this.data.config.organizations.filter((_, i) => i !== idx)
     this._saveConfig({ organizations }, () => this.setData({ 'config.organizations': organizations }))
-  },
-
-  // --- Operators ---
-  onNewOperatorInput(e) { this.setData({ newOperator: e.detail.value }) },
-
-  onAddOperator() {
-    const name = this.data.newOperator.trim()
-    if (!name) return
-    if (this.data.config.operators.includes(name)) {
-      showError('已存在'); return
-    }
-    const operators = [...this.data.config.operators, name]
-    this._saveConfig({ operators }, () => this.setData({ 'config.operators': operators, newOperator: '' }))
-  },
-
-  onRemoveOperator(e) {
-    const idx = e.currentTarget.dataset.idx
-    const operators = this.data.config.operators.filter((_, i) => i !== idx)
-    this._saveConfig({ operators }, () => this.setData({ 'config.operators': operators }))
   },
 
   _saveConfig(patch, onSuccess) {
