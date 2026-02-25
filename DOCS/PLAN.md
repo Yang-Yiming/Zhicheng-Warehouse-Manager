@@ -5,7 +5,7 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 ## Phase 1: Project Scaffolding ✓
 
 - [x] Initialize WeChat miniprogram project structure (`miniprogram/`, `cloudfunctions/`)
-- [x] `project.config.json` with appid `your-app-id`
+- [x] `project.config.json` uses placeholder appid in git-tracked config (real appid via local sync)
 - [x] miniprogram-ci installed, `ci/upload.js` and `ci/preview.js` ready
 - [x] Base page stubs: operations, inventory, operation-form, settings
 - [x] Cloud function stubs: operationCreate, inventoryRebuild
@@ -106,3 +106,8 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 
 - [x] Update `operationsList` / `inventoryList` missing-collection detection to support `-502005`, `collection not exists`, and `Db or Table not exist`
 - [x] Update `inventoryRebuild` to auto-create missing `operations` / `inventory` collections and return stable success on first-run empty state
+
+## Phase 6.1: Local Env Config Workflow ✓
+
+- [x] Add `.env.example` and ignore `.env.local` for local AppID management
+- [x] Add `npm run config:sync` script to sync `APPID` from `.env.local` into `project.config.json` before opening WeChat DevTools

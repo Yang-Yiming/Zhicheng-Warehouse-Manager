@@ -10,6 +10,8 @@ WeChat miniprogram architecture for the Warehouse Manager.
 - **Cloud functions**: Node.js serverless functions
 - **CI/Tooling**: miniprogram-ci (preferred over WeChat DevTools GUI for upload/preview/build)
 
+Configuration note: WeChat DevTools reads `project.config.json` directly and does not consume `.env` files. Local AppID is managed via `.env.local` and synced into `project.config.json` by running `npm run config:sync`.
+
 ## Project Structure
 
 ```
