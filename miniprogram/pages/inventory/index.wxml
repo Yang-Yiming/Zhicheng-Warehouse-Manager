@@ -5,7 +5,7 @@
 
   <view class="list">
     <block wx:for="{{filtered}}" wx:key="_id">
-      <view class="card">
+      <view class="card" bindtap="onItemTap" data-item="{{item}}">
         <view class="card-row main-row">
           <text class="item-name">{{item.itemName}}</text>
           <view class="qty-badge"><text class="qty-num">{{item.quantity}}</text><text class="qty-unit">件</text></view>
@@ -27,4 +27,6 @@
     <view wx:if="{{loading}}" class="tip">加载中...</view>
     <view wx:elif="{{filtered.length === 0 && !loading}}" class="tip">暂无库存</view>
   </view>
+
+  <view class="fab" bindtap="onAddNew">＋</view>
 </view>

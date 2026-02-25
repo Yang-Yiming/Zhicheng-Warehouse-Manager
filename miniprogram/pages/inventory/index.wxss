@@ -15,3 +15,18 @@
 .sep { font-size: 24rpx; color: #ccc; }
 .muted { color: #999; }
 .tip { text-align: center; padding: 48rpx; color: #999; font-size: 28rpx; }
+.fab {
+  position: fixed;
+  right: 40rpx;
+  bottom: 60rpx;
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50rpx;
+  background: #07c160;
+  color: #fff;
+  font-size: 56rpx;
+  line-height: 100rpx;
+  text-align: center;
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.18);
+  z-index: 100;
+}

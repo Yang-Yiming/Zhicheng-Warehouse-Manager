@@ -18,25 +18,28 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 ├── miniprogram/
 │   ├── app.js / app.json / app.wxss      # App entry + login orchestration
 │   ├── pages/
-│   │   ├── operations/                    # Operations log list
-│   │   ├── inventory/                     # Current inventory list
-│   │   ├── operation-form/                # New operation form
+│   │   ├── operations/                    # Operations log list (paginated, searchable) + FAB → new form
+│   │   ├── inventory/                     # Current inventory list; tap item → action sheet → pre-filled form; FAB → new 入库 form
+│   │   ├── operation-form/                # New/pre-filled operation form (accepts URL params: itemId, itemName, organization, operation, locked)
 │   │   ├── settings/                      # Config management + profile edit
 │   │   └── profile-setup/                 # First-launch display name setup
-│   ├── components/
-│   │   ├── search-bar/                    # Reusable search
-│   │   └── sortable-list/                 # Sortable list view
 │   └── utils/
-│       ├── db.js                          # Cloud DB helpers
-│       ├── validation.js                  # Input validation
-│       ├── cloud.js                       # Unified cloud function caller
-│       ├── search.js                      # Shared full-text filtering helper
-│       └── feedback.js                    # Shared user feedback helper (toast/modal)
+│       ├── db.js                          # Cloud DB collection refs + query helpers
+│       ├── validation.js                  # Input validation (required, positiveInt, datetimeFormat, validateOperation)
+│       ├── cloud.js                       # Unified cloud function caller (callCloud)
+│       ├── search.js                      # Shared full-text filtering helper (filterByQuery)
+│       └── feedback.js                    # Shared user feedback helper (showError, showSuccess)
 ├── cloudfunctions/
-│   ├── operationCreate/                   # Create operation + update inventory
-│   ├── inventoryRebuild/                  # Rebuild inventory from history
-│   ├── userLogin/                         # Lookup-or-create user by openid
-│   └── userSetProfile/                    # Save display name for logged-in user
+│   ├── operationCreate/                   # Validate + write operation, update inventory
+│   ├── operationsList/                    # Paginated operations list sorted by submitTime desc
+│   ├── inventoryList/                     # Full paginated inventory sorted by itemId
+│   ├── inventoryRebuild/                  # Rebuild inventory by replaying all operations
+│   ├── configGet/                         # Return config doc; seed defaults on first run
+│   ├── configUpdate/                      # Update organizations/operators list
+│   ├── userLogin/                         # Lookup-or-create user by openid on app launch
+│   └── userSetProfile/                    # Save display name (max 20 chars) for logged-in user
+├── scripts/
+│   └── sync-local-config.js              # Sync APPID from .env.local into project.config.json
 └── DOCS/
 ```
 
@@ -71,6 +74,14 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 ```
 Note: `operator` and `submitter` are server-resolved from the `users` collection via `cloud.getWXContext()`. Clients do not send these fields. `operatorOpenid` is stored for audit purposes.
 
+Valid `operation` values: `入库` | `出库` | `物资增添` | `部分出库`
+
+Business rules enforced by `operationCreate`:
+- `入库`: rejects if `(itemId, organization)` already exists in inventory
+- `出库` / `物资增添` / `部分出库`: requires item to already exist
+- `部分出库`: quantity cannot exceed current inventory quantity
+- `出库` sets inventory quantity to 0 (item removed if qty ≤ 0 after update)
+
 ### `inventory`
 ```json
 {
@@ -97,15 +108,18 @@ Note: `operator` and `submitter` are server-resolved from the `users` collection
 
 Implementation note: cloud functions write config fields (`organizations`, `operators`) into `doc('settings')` without embedding `_id` inside `data`, to avoid first-run write failures during seeding/update.
 
+`configGet` seeds a hardcoded default `organizations` list on first run (学生会, 团委, 学生发展中心, etc.) and an empty `operators` list. It also normalizes the stored arrays on every read (deduplication, trim whitespace).
+
 ## Data Flow
 
 ### Login Flow (app launch)
 ```
-onLaunch → wx.login() → callFunction('userLogin')
-  → if isNew || !displayName → navigate to profile-setup page
-  → user enters displayName → callFunction('userSetProfile')
-  → _setLoginReady(user) → fire queued onLoginReady callbacks
-  → wx.switchTab to operations
+onLaunch → wx.login() → callCloud('userLogin')
+  → if isNew || !displayName → wx.navigateTo profile-setup page
+    → user enters displayName → callCloud('userSetProfile')
+    → profile-setup calls app._setLoginReady(user)
+  → else → app._setLoginReady(user)
+  → _setLoginReady fires queued onLoginReady callbacks
 ```
 
 Pages call `app.onLoginReady(cb)` to receive the current user. If login is already complete the callback fires immediately; otherwise it is queued.
@@ -124,14 +138,22 @@ User fills form → validate on client → call cloud function operationCreate
 ### Inventory Rebuild
 ```
 Admin triggers rebuild → cloud function inventoryRebuild
-  → paginated read of all `operations` sorted by time (avoid cloud DB default fetch limits)
-  → replay operations sequentially to compute current state
-  → replace entire `inventory` collection
+  → ensure 'operations' and 'inventory' collections exist
+  → paginated read of all operations sorted by operationTime asc
+  → replay operations into state map keyed by `${itemId}::${organization}`
+  → filter out entries with quantity ≤ 0
+  → delete all existing inventory docs, write new entries
 ```
 
-`inventoryList` also uses paginated reads to return full inventory data instead of a truncated first page.
+`inventoryList` uses paginated reads (page size 100) to return the full inventory sorted by `itemId`, bypassing the Cloud DB default 20-record fetch limit.
 
 Cloud functions handling collection bootstrap (`operationsList`, `inventoryList`, `operationCreate`, `inventoryRebuild`) treat CloudBase missing-collection errors via both error code (`-502005`) and message variants (`collection not exists`, `Db or Table not exist`, `does not exist`) because different runtimes return different wording.
+
+### `db.js` helper notes
+
+- `getOperations(page, pageSize)` — direct Cloud DB query, paginated, sorted by `submitTime` desc
+- `getInventory()` — delegates to `inventoryList` cloud function (not direct DB) to bypass miniprogram permission limits on full collection reads
+- `getConfig()` — direct Cloud DB read of `config.doc('settings')`
 
 ## Key Design Decisions
 

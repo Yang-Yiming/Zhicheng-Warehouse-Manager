@@ -11,6 +11,7 @@ Page({
   },
 
   onLoad() { this._load() },
+  onShow() { if (this._loaded) this._load() },
   onPullDownRefresh() { this._load() },
 
   _load() {
@@ -18,6 +19,7 @@ Page({
     getInventory()
       .then(res => {
         this.setData({ inventory: res.data, loading: false })
+        this._loaded = true
         this._applyFilter()
         wx.stopPullDownRefresh()
       })
@@ -40,5 +42,23 @@ Page({
       ['itemId', 'itemName', 'organization', 'lastOperator', 'lastOperation']
     )
     this.setData({ filtered })
+  },
+
+  onItemTap(e) {
+    const item = e.currentTarget.dataset.item
+    wx.showActionSheet({
+      itemList: ['物资增添', '部分出库', '出库'],
+      success: (res) => {
+        const ops = ['物资增添', '部分出库', '出库']
+        const op = ops[res.tapIndex]
+        wx.navigateTo({
+          url: `/pages/operation-form/index?itemId=${encodeURIComponent(item.itemId)}&itemName=${encodeURIComponent(item.itemName)}&organization=${encodeURIComponent(item.organization)}&operation=${encodeURIComponent(op)}&locked=1`
+        })
+      }
+    })
+  },
+
+  onAddNew() {
+    wx.navigateTo({ url: '/pages/operation-form/index?operation=%E5%85%A5%E5%BA%93' })
   },
 })

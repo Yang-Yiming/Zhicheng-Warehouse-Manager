@@ -14,7 +14,8 @@
 
     <view class="field">
       <text class="label required">物资编号</text>
-      <input class="input" placeholder="如 A1-3-05" value="{{form.itemId}}" bindinput="onItemIdInput" />
+      <view wx:if="{{locked}}"><text class="readonly">{{form.itemId}}</text></view>
+      <input wx:else class="input" placeholder="如 A1-3-05" value="{{form.itemId}}" bindinput="onItemIdInput" />
     </view>
 
     <view class="field">
@@ -24,7 +25,8 @@
 
     <view class="field">
       <text class="label required">所属组织</text>
-      <picker mode="selector" range="{{organizations}}" value="{{orgIndex}}" bindchange="onOrgChange">
+      <view wx:if="{{locked}}"><text class="readonly">{{form.organization}}</text></view>
+      <picker wx:else mode="selector" range="{{organizations}}" value="{{orgIndex}}" bindchange="onOrgChange">
         <view class="picker-val {{form.organization ? '' : 'placeholder'}}">{{form.organization || '请选择'}}</view>
       </picker>
     </view>

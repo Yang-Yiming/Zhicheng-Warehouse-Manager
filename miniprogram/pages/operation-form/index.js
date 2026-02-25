@@ -15,10 +15,26 @@ Page({
     dateValue: '',
     timeValue: '',
     submitting: false,
+    locked: false,
     OPERATIONS,
   },
 
-  onLoad() {
+  onLoad(options) {
+    const { itemId, itemName, organization, operation, locked } = options
+    const isLocked = locked === '1'
+    const updates = { locked: isLocked }
+
+    if (itemId) updates['form.itemId'] = decodeURIComponent(itemId)
+    if (itemName) updates['form.itemName'] = decodeURIComponent(itemName)
+    if (organization) updates['form.organization'] = decodeURIComponent(organization)
+    if (operation) {
+      const op = decodeURIComponent(operation)
+      const idx = OPERATIONS.indexOf(op)
+      updates['form.operation'] = op
+      updates.operationIndex = idx
+    }
+
+    this.setData(updates)
     app.onLoginReady(user => this.setData({ operatorName: user.displayName }))
     this._loadConfig()
     this._initDateTime()

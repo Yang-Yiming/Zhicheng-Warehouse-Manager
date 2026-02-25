@@ -28,4 +28,6 @@
     <view wx:elif="{{!hasMore && filtered.length > 0}}" class="tip">已加载全部</view>
     <view wx:elif="{{filtered.length === 0 && !loading}}" class="tip">暂无记录</view>
   </view>
+
+  <view class="fab" bindtap="onAddNew">＋</view>
 </view>

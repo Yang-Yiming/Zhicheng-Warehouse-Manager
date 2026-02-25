@@ -16,6 +16,10 @@ Page({
     this._load(true)
   },
 
+  onShow() {
+    if (this._loaded) this._load(true)
+  },
+
   onPullDownRefresh() {
     this._load(true)
   },
@@ -36,6 +40,7 @@ Page({
         const mapped = data.map(op => ({ ...op, opClass: opClassMap[op.operation] || 'other' }))
         const operations = reset ? mapped : [...this.data.operations, ...mapped]
         this.setData({ operations, page: page + 1, hasMore: operations.length < total, loading: false })
+        this._loaded = true
         this._applyFilter()
         if (reset) wx.stopPullDownRefresh()
       })
@@ -58,5 +63,9 @@ Page({
       ['itemId', 'itemName', 'operation', 'organization', 'operator', 'operationTime']
     )
     this.setData({ filtered })
+  },
+
+  onAddNew() {
+    wx.navigateTo({ url: '/pages/operation-form/index' })
   },
 })
