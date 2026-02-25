@@ -3,7 +3,8 @@
     "pages/operations/index",
     "pages/inventory/index",
     "pages/operation-form/index",
-    "pages/settings/index"
+    "pages/settings/index",
+    "pages/profile-setup/index"
   ],
   "tabBar": {
     "list": [

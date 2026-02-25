@@ -14,12 +14,13 @@ WeChat miniprogram architecture for the Warehouse Manager.
 
 ```
 ├── miniprogram/
-│   ├── app.js / app.json / app.wxss      # App entry
+│   ├── app.js / app.json / app.wxss      # App entry + login orchestration
 │   ├── pages/
 │   │   ├── operations/                    # Operations log list
 │   │   ├── inventory/                     # Current inventory list
 │   │   ├── operation-form/                # New operation form
-│   │   └── settings/                      # Config management
+│   │   ├── settings/                      # Config management + profile edit
+│   │   └── profile-setup/                 # First-launch display name setup
 │   ├── components/
 │   │   ├── search-bar/                    # Reusable search
 │   │   └── sortable-list/                 # Sortable list view
@@ -28,11 +29,24 @@ WeChat miniprogram architecture for the Warehouse Manager.
 │       └── validation.js                  # Input validation
 ├── cloudfunctions/
 │   ├── operationCreate/                   # Create operation + update inventory
-│   └── inventoryRebuild/                  # Rebuild inventory from history
+│   ├── inventoryRebuild/                  # Rebuild inventory from history
+│   ├── userLogin/                         # Lookup-or-create user by openid
+│   └── userSetProfile/                    # Save display name for logged-in user
 └── DOCS/
 ```
 
 ## Database Collections
+
+### `users`
+```json
+{
+  "_id": "auto",
+  "openid": "oXXXX...",
+  "displayName": "张三",
+  "createdAt": "2026-02-25T06:00:00Z",
+  "updatedAt": "2026-02-25T06:00:00Z"
+}
+```
 
 ### `operations`
 ```json
@@ -46,9 +60,11 @@ WeChat miniprogram architecture for the Warehouse Manager.
   "quantity": 10,
   "operationTime": "2024-01-15 10:00",
   "operator": "张三",
-  "submitter": "李四"
+  "submitter": "张三",
+  "operatorOpenid": "oXXXX..."
 }
 ```
+Note: `operator` and `submitter` are server-resolved from the `users` collection via `cloud.getWXContext()`. Clients do not send these fields. `operatorOpenid` is stored for audit purposes.
 
 ### `inventory`
 ```json
@@ -76,10 +92,23 @@ WeChat miniprogram architecture for the Warehouse Manager.
 
 ## Data Flow
 
+### Login Flow (app launch)
+```
+onLaunch → wx.login() → callFunction('userLogin')
+  → if isNew || !displayName → navigate to profile-setup page
+  → user enters displayName → callFunction('userSetProfile')
+  → _setLoginReady(user) → fire queued onLoginReady callbacks
+  → wx.switchTab to operations
+```
+
+Pages call `app.onLoginReady(cb)` to receive the current user. If login is already complete the callback fires immediately; otherwise it is queued.
+
 ### Creating an Operation
 ```
 User fills form → validate on client → call cloud function operationCreate
-  → write to `operations` collection
+  → cloud.getWXContext() → OPENID
+  → lookup users collection → resolve displayName
+  → write to `operations` collection (operator/submitter = displayName, operatorOpenid = OPENID)
   → update `inventory` collection (add/remove/modify)
   → return success/failure
 ```

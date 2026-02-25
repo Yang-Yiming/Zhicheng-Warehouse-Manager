@@ -1,0 +1,9 @@
+{
+  "name": "userLogin",
+  "version": "1.0.0",
+  "description": "Lookup or create user profile by openid",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "configUpdate",
+  "version": "1.0.0",
+  "description": "Update config (organizations and operators)",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

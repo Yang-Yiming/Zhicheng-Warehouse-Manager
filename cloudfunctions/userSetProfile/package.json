@@ -1,0 +1,9 @@
+{
+  "name": "userSetProfile",
+  "version": "1.0.0",
+  "description": "Set display name for the logged-in user",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

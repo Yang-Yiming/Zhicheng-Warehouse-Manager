@@ -1,0 +1,9 @@
+{
+  "name": "operationsList",
+  "version": "1.0.0",
+  "description": "List operations with pagination",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

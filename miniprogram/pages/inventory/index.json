@@ -1,1 +1,1 @@
-{ "navigationBarTitleText": "当前库存" }
+{ "navigationBarTitleText": "当前库存", "enablePullDownRefresh": true }

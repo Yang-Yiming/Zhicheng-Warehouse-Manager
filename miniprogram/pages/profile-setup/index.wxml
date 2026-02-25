@@ -1,0 +1,15 @@
+<view class="container">
+  <view class="title">设置您的昵称</view>
+  <view class="subtitle">昵称将作为操作记录中的操作人显示</view>
+  <input
+    class="name-input"
+    placeholder="请输入昵称（最多20字）"
+    maxlength="20"
+    value="{{displayName}}"
+    bindinput="onInput"
+  />
+  <button class="confirm-btn" bindtap="onConfirm" disabled="{{loading}}">
+    {{loading ? '保存中...' : '确认'}}
+  </button>
+  <view wx:if="{{error}}" class="error">{{error}}</view>
+</view>

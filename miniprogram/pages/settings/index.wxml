@@ -1,3 +1,46 @@
-<view class="container">
-  <text>设置（待实现）</text>
+<view class="page">
+  <view class="section-title">我的信息</view>
+  <view class="card">
+    <view class="field">
+      <text class="label">昵称</text>
+      <block wx:if="{{editingName}}">
+        <input class="input" value="{{nameInput}}" bindinput="onNameInput" focus="{{true}}" />
+        <text class="action-btn" bindtap="onSaveName">保存</text>
+        <text class="action-btn cancel" bindtap="onCancelEdit">取消</text>
+      </block>
+      <block wx:else>
+        <text class="value">{{displayName}}</text>
+        <text class="action-btn" bindtap="onEditName">编辑</text>
+      </block>
+    </view>
+  </view>
+
+  <view class="section-title">所属组织</view>
+  <view class="card">
+    <view class="tag-list">
+      <view wx:for="{{config.organizations}}" wx:key="*this" class="tag">
+        <text>{{item}}</text>
+        <text class="tag-del" bindtap="onRemoveOrg" data-idx="{{index}}">×</text>
+      </view>
+    </view>
+    <view class="add-row">
+      <input class="input" placeholder="添加组织" value="{{newOrg}}" bindinput="onNewOrgInput" confirm-type="done" bindconfirm="onAddOrg" />
+      <text class="action-btn" bindtap="onAddOrg">添加</text>
+    </view>
+  </view>
+
+  <view class="section-title">操作人列表</view>
+  <view class="card">
+    <view class="tag-list">
+      <view wx:for="{{config.operators}}" wx:key="*this" class="tag">
+        <text>{{item}}</text>
+        <text class="tag-del" bindtap="onRemoveOperator" data-idx="{{index}}">×</text>
+      </view>
+      <view wx:if="{{config.operators.length === 0}}" class="empty-hint">暂无操作人</view>
+    </view>
+    <view class="add-row">
+      <input class="input" placeholder="添加操作人" value="{{newOperator}}" bindinput="onNewOperatorInput" confirm-type="done" bindconfirm="onAddOperator" />
+      <text class="action-btn" bindtap="onAddOperator">添加</text>
+    </view>
+  </view>
 </view>

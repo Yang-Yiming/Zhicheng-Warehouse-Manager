@@ -1,1 +1,20 @@
-/* operations/index.wxss */
+.page { background: #f5f5f5; min-height: 100vh; }
+.search-bar { padding: 16rpx 24rpx; background: #fff; }
+.search-input { background: #f0f0f0; border-radius: 32rpx; padding: 12rpx 28rpx; font-size: 28rpx; width: 100%; box-sizing: border-box; }
+.list { padding: 16rpx; }
+.card { background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
+.card-row { display: flex; align-items: center; margin-bottom: 10rpx; }
+.card-row:last-child { margin-bottom: 0; }
+.main-row { gap: 12rpx; }
+.item-name { font-size: 32rpx; font-weight: 600; flex: 1; color: #222; }
+.op-tag { font-size: 22rpx; padding: 4rpx 14rpx; border-radius: 8rpx; color: #fff; flex-shrink: 0; }
+.op-入库 { background: #4caf50; }
+.op-出库 { background: #f44336; }
+.op-物资增添 { background: #2196f3; }
+.op-部分出库 { background: #ff9800; }
+.qty { font-size: 28rpx; color: #333; flex-shrink: 0; }
+.sub-row { gap: 8rpx; flex-wrap: wrap; }
+.sub { font-size: 24rpx; color: #666; }
+.sep { font-size: 24rpx; color: #ccc; }
+.muted { color: #999; }
+.tip { text-align: center; padding: 48rpx; color: #999; font-size: 28rpx; }

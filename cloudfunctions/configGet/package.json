@@ -1,0 +1,9 @@
+{
+  "name": "configGet",
+  "version": "1.0.0",
+  "description": "Get config (organizations and operators)",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}
