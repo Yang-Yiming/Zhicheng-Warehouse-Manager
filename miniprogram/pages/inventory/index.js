@@ -1,3 +1,4 @@
+const app = getApp()
 const { getInventory } = require('../../utils/db')
 const { showError } = require('../../utils/feedback')
 const { filterByQuery } = require('../../utils/search')
@@ -10,9 +11,18 @@ Page({
     loading: false,
     page: 1,
     hasMore: true,
+    unauthorized: false,
   },
 
-  onLoad() { this._load(true) },
+  onLoad() {
+    app.onLoginReady(user => {
+      if ((user.role || 'unverified') === 'unverified') {
+        this.setData({ unauthorized: true })
+        return
+      }
+      this._load(true)
+    })
+  },
   onShow() { if (this._loaded) this._load(true) },
   onPullDownRefresh() { this._load(true) },
 

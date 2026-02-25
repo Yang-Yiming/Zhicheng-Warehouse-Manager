@@ -29,7 +29,20 @@ async function countAll() {
   return total
 }
 
+async function getCallerRole(openid) {
+  const { data } = await db.collection('users').where({ openid }).get()
+  if (data.length === 0) return 'unverified'
+  return data[0].role || 'unverified'
+}
+
 exports.main = async (event = {}) => {
+  const { OPENID } = cloud.getWXContext()
+  if (!OPENID) return { success: false, data: [], error: '无法获取用户身份' }
+  const role = await getCallerRole(OPENID)
+  if (role === 'unverified') {
+    return { success: false, data: [], error: '权限不足，请联系管理员授权' }
+  }
+
   const page = event.page || 1
   const pageSize = event.pageSize || 20
   const skip = (page - 1) * pageSize

@@ -39,6 +39,11 @@ Page({
     this.setData(updates)
     if (updates['form.operation'] === '出库') this._fetchMaxQuantity()
     app.onLoginReady(user => {
+      if ((user.role || 'unverified') === 'unverified') {
+        showError('权限不足，请联系管理员授权', { modal: true, title: '无权限' })
+        wx.navigateBack()
+        return
+      }
       this.setData({ operatorName: user.displayName })
       const orgs = Array.isArray(user.organizations) ? user.organizations : []
       if (orgs.length > 0 && !isLocked) {

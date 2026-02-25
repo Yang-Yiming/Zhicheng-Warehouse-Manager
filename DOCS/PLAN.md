@@ -87,7 +87,25 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 
 ## v0.2.0
 
-## Phase 5: Polish & Extras
+## Phase 6.7: Role-Based Permission System ✓
+
+- [x] Add `role` field to `users` collection: `unverified` | `normal` | `admin` | `superadmin` | `chairman`; new users default to `unverified`
+- [x] Add `dismissed` field to `users` collection: `true` means admin has ignored this unverified user's application
+- [x] `userLogin` returns `role` in formatted user object; new user creation writes `role: 'unverified'`
+- [x] `operationCreate` rejects unverified users with permission error
+- [x] `operationsList` rejects unverified users with permission error
+- [x] `inventoryList` rejects unverified users with permission error
+- [x] `configUpdate` requires admin/superadmin/chairman role
+- [x] `userSetOrgs` requires admin+ for self-edit; supports `targetOpenid` for proxy edit (admin+ only)
+- [x] New `userList` cloud function — returns users by role (admin+ only); excludes dismissed unverified users
+- [x] New `userSetRole` cloud function — role changes with permission matrix enforcement
+- [x] New `chairmanTransfer` cloud function — transfers chairman role to an admin
+- [x] Operations page: unverified users see "联系管理员授权" instead of list + FAB
+- [x] Inventory page: same unverified block pattern
+- [x] Operation-form page: unverified users are redirected back with error modal
+- [x] Settings page: role badge in 我的信息; 所属组织/全部组织 hidden for unverified; org editing restricted to admin+; user management sections (申请/全部成员/管理员管理/转让主席) shown based on role
+- [x] New `user-orgs-edit` page — admin edits a specific user's organizations via `userSetOrgs({ targetOpenid })`
+
 
 - Operation audit log (monthly logs viewable in-app)
 - Inventory rebuild button (admin)

@@ -9,6 +9,7 @@ function formatUser(user) {
     openid: user.openid,
     displayName: String(user.displayName || ''),
     organizations: Array.isArray(user.organizations) ? user.organizations : [],
+    role: user.role || 'unverified',
   }
 }
 
@@ -34,8 +35,8 @@ exports.main = async () => {
 
     const now = new Date().toISOString()
     try {
-      await col.add({ data: { openid: OPENID, displayName: '', createdAt: now, updatedAt: now } })
-      return { success: true, isNew: true, user: { openid: OPENID, displayName: '' } }
+      await col.add({ data: { openid: OPENID, displayName: '', role: 'unverified', createdAt: now, updatedAt: now } })
+      return { success: true, isNew: true, user: { openid: OPENID, displayName: '', role: 'unverified' } }
     } catch (_) {
       const { data: retryData } = await col.where({ openid: OPENID }).get()
       if (retryData.length > 0) {

@@ -17,8 +17,21 @@ function isCollectionNotFound(err) {
     || message.includes('Db or Table not exist')
 }
 
+async function getCallerRole(openid) {
+  const { data } = await db.collection('users').where({ openid }).get()
+  if (data.length === 0) return 'unverified'
+  return data[0].role || 'unverified'
+}
+
 exports.main = async (event) => {
   try {
+    const { OPENID } = cloud.getWXContext()
+    if (!OPENID) return { success: false, data: [], total: 0, error: '无法获取用户身份' }
+    const role = await getCallerRole(OPENID)
+    if (role === 'unverified') {
+      return { success: false, data: [], total: 0, error: '权限不足，请联系管理员授权' }
+    }
+
     const { page = 1, pageSize = 20 } = event
     const skip = (page - 1) * pageSize
 

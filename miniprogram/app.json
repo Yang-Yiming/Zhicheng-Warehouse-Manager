@@ -4,7 +4,8 @@
     "pages/inventory/index",
     "pages/operation-form/index",
     "pages/settings/index",
-    "pages/profile-setup/index"
+    "pages/profile-setup/index",
+    "pages/user-orgs-edit/index"
   ],
   "tabBar": {
     "list": [

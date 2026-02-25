@@ -1,4 +1,5 @@
 <view class="page">
+  <!-- 我的信息 -->
   <view class="section-title">我的信息</view>
   <view class="card">
     <view class="field">
@@ -13,40 +14,120 @@
         <text class="action-btn" bindtap="onEditName">编辑</text>
       </block>
     </view>
-  </view>
-
-  <view class="section-title">所属组织</view>
-  <view class="card">
-    <view class="tag-list">
-      <view wx:for="{{userOrgs}}" wx:key="*this" class="tag">
-        <text>{{item}}</text>
-        <text class="tag-del" bindtap="onRemoveUserOrg" data-idx="{{index}}">×</text>
-      </view>
-    </view>
-    <picker wx:if="{{availableOrgs.length > 0}}" range="{{availableOrgs}}" bindchange="onAddUserOrg">
-      <text class="action-btn">+ 添加</text>
-    </picker>
-    <text wx:else class="empty-hint">已加入全部组织</text>
-  </view>
-
-  <view class="section-title">全部组织</view>
-  <view class="card">
     <view class="field">
-      <text class="value">共{{config.organizations.length}}个</text>
-      <text wx:if="{{!editingOrgs}}" class="action-btn" bindtap="onEditOrgs">编辑</text>
-      <text wx:else class="action-btn" bindtap="onDoneOrgs">完成</text>
+      <text class="label">身份</text>
+      <view class="role-badge role-{{role}}"><text>{{roleLabel}}</text></view>
     </view>
-    <block wx:if="{{editingOrgs}}">
-      <view class="tag-list">
-        <view wx:for="{{config.organizations}}" wx:key="*this" class="tag">
-          <text>{{item}}</text>
-          <text class="tag-del" bindtap="onRemoveOrg" data-idx="{{index}}">×</text>
+  </view>
+
+  <!-- 所属组织 (非未认证) -->
+  <block wx:if="{{role !== 'unverified'}}">
+    <view class="section-title">所属组织</view>
+    <view class="card">
+      <block wx:if="{{isAdmin}}">
+        <view class="tag-list">
+          <view wx:for="{{userOrgs}}" wx:key="*this" class="tag">
+            <text>{{item}}</text>
+            <text class="tag-del" bindtap="onRemoveUserOrg" data-idx="{{index}}">×</text>
+          </view>
+        </view>
+        <picker wx:if="{{availableOrgs.length > 0}}" range="{{availableOrgs}}" bindchange="onAddUserOrg">
+          <text class="action-btn">+ 添加</text>
+        </picker>
+        <text wx:else class="empty-hint">已加入全部组织</text>
+      </block>
+      <block wx:else>
+        <view wx:if="{{userOrgs.length > 0}}" class="tag-list">
+          <view wx:for="{{userOrgs}}" wx:key="*this" class="tag"><text>{{item}}</text></view>
+        </view>
+        <text wx:else class="empty-hint">暂无所属组织，请联系管理员添加</text>
+      </block>
+    </view>
+  </block>
+
+  <!-- 全部组织 (非未认证) -->
+  <block wx:if="{{role !== 'unverified'}}">
+    <view class="section-title">全部组织</view>
+    <view class="card">
+      <view class="field">
+        <text class="value">共{{config.organizations.length}}个</text>
+        <block wx:if="{{isAdmin}}">
+          <text wx:if="{{!editingOrgs}}" class="action-btn" bindtap="onEditOrgs">编辑</text>
+          <text wx:else class="action-btn" bindtap="onDoneOrgs">完成</text>
+        </block>
+      </view>
+      <block wx:if="{{isAdmin && editingOrgs}}">
+        <view class="tag-list">
+          <view wx:for="{{config.organizations}}" wx:key="*this" class="tag">
+            <text>{{item}}</text>
+            <text class="tag-del" bindtap="onRemoveOrg" data-idx="{{index}}">×</text>
+          </view>
+        </view>
+        <view class="add-row">
+          <input class="input" placeholder="添加组织" value="{{newOrg}}" bindinput="onNewOrgInput" confirm-type="done" bindconfirm="onAddOrg" />
+          <text class="action-btn" bindtap="onAddOrg">添加</text>
+        </view>
+      </block>
+      <block wx:elif="{{!isAdmin}}">
+        <view class="tag-list">
+          <view wx:for="{{config.organizations}}" wx:key="*this" class="tag"><text>{{item}}</text></view>
+        </view>
+      </block>
+    </view>
+  </block>
+
+  <!-- 申请 (admin+) -->
+  <block wx:if="{{isAdmin}}">
+    <view class="section-title">申请 ({{unverifiedUsers.length}})</view>
+    <view class="card">
+      <view wx:if="{{unverifiedUsers.length === 0}}" class="empty-hint pad">暂无待审批用户</view>
+      <view wx:for="{{unverifiedUsers}}" wx:key="openid" class="user-row">
+        <view class="user-info">
+          <text class="user-name">{{item.displayName || '(未设置昵称)'}}</text>
+          <text class="user-orgs">{{item.organizations.length > 0 ? item.organizations.join('、') : '无组织'}}</text>
+        </view>
+        <view class="user-actions">
+          <text class="user-btn approve" bindtap="onApproveUser" data-openid="{{item.openid}}">通过</text>
+          <text class="user-btn dismiss" bindtap="onDismissUser" data-openid="{{item.openid}}">忽略</text>
         </view>
       </view>
-      <view class="add-row">
-        <input class="input" placeholder="添加组织" value="{{newOrg}}" bindinput="onNewOrgInput" confirm-type="done" bindconfirm="onAddOrg" />
-        <text class="action-btn" bindtap="onAddOrg">添加</text>
+    </view>
+  </block>
+
+  <!-- 全部成员 (admin+) -->
+  <block wx:if="{{isAdmin}}">
+    <view class="section-title">全部成员 ({{normalUsers.length}})</view>
+    <view class="card">
+      <view wx:if="{{normalUsers.length === 0}}" class="empty-hint pad">暂无普通用户</view>
+      <view wx:for="{{normalUsers}}" wx:key="openid" class="user-row">
+        <view class="user-info">
+          <text class="user-name">{{item.displayName || '(未设置昵称)'}}</text>
+          <text class="user-orgs">{{item.organizations.length > 0 ? item.organizations.join('、') : '无组织'}}</text>
+        </view>
+        <view class="user-actions">
+          <text class="user-btn edit" bindtap="onEditUserOrgs" data-openid="{{item.openid}}" data-name="{{item.displayName}}">编辑组织</text>
+          <text wx:if="{{isChairman}}" class="user-btn promote" bindtap="onPromoteToAdmin" data-openid="{{item.openid}}" data-name="{{item.displayName}}">提拔</text>
+        </view>
       </view>
-    </block>
-  </view>
+    </view>
+  </block>
+
+  <!-- 管理员管理 (chairman only) -->
+  <block wx:if="{{isChairman}}">
+    <view class="section-title">管理员管理 ({{adminUsers.length}})</view>
+    <view class="card">
+      <view wx:if="{{adminUsers.length === 0}}" class="empty-hint pad">暂无管理员</view>
+      <view wx:for="{{adminUsers}}" wx:key="openid" class="user-row">
+        <view class="user-info">
+          <text class="user-name">{{item.displayName || '(未设置昵称)'}}</text>
+          <text class="user-orgs">{{item.organizations.length > 0 ? item.organizations.join('、') : '无组织'}}</text>
+        </view>
+        <view class="user-actions">
+          <text class="user-btn demote" bindtap="onDemoteToNormal" data-openid="{{item.openid}}" data-name="{{item.displayName}}">降级</text>
+          <text class="user-btn transfer" bindtap="onTransferChairman" data-openid="{{item.openid}}" data-name="{{item.displayName}}">转让主席</text>
+        </view>
+      </view>
+    </view>
+  </block>
 </view>
+

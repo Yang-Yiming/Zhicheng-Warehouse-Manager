@@ -1,3 +1,4 @@
+const app = getApp()
 const { callCloud } = require('../../utils/cloud')
 const { showError } = require('../../utils/feedback')
 const { filterByQuery } = require('../../utils/search')
@@ -10,10 +11,17 @@ Page({
     loading: false,
     page: 1,
     hasMore: true,
+    unauthorized: false,
   },
 
   onLoad() {
-    this._load(true)
+    app.onLoginReady(user => {
+      if ((user.role || 'unverified') === 'unverified') {
+        this.setData({ unauthorized: true })
+        return
+      }
+      this._load(true)
+    })
   },
 
   onShow() {

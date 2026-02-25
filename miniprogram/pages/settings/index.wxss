@@ -12,3 +12,24 @@
 .tag-del { color: #90a4ae; font-size: 30rpx; line-height: 1; }
 .add-row { display: flex; align-items: center; padding: 16rpx 0 24rpx; border-top: 1rpx solid #f0f0f0; margin-top: 8rpx; }
 .empty-hint { font-size: 26rpx; color: #bbb; }
+.empty-hint.pad { padding: 24rpx 0; display: block; }
+.role-badge { display: inline-flex; align-items: center; padding: 6rpx 20rpx; border-radius: 24rpx; font-size: 24rpx; }
+.role-unverified { background: #f5f5f5; color: #999; }
+.role-normal { background: #e3f2fd; color: #1565c0; }
+.role-admin { background: #e8f5e9; color: #2e7d32; }
+.role-superadmin { background: #fff3e0; color: #e65100; }
+.role-chairman { background: #fce4ec; color: #880e4f; }
+.user-row { display: flex; align-items: center; padding: 20rpx 0; border-bottom: 1rpx solid #f0f0f0; }
+.user-row:last-child { border-bottom: none; }
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 28rpx; color: #333; display: block; }
+.user-orgs { font-size: 22rpx; color: #999; display: block; margin-top: 4rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-actions { display: flex; gap: 12rpx; flex-shrink: 0; margin-left: 16rpx; }
+.user-btn { font-size: 24rpx; padding: 8rpx 18rpx; border-radius: 8rpx; }
+.user-btn.approve { color: #fff; background: #4caf50; }
+.user-btn.dismiss { color: #666; background: #f0f0f0; }
+.user-btn.edit { color: #1976d2; background: #e3f2fd; }
+.user-btn.promote { color: #fff; background: #ff9800; }
+.user-btn.demote { color: #fff; background: #f44336; }
+.user-btn.transfer { color: #fff; background: #9c27b0; }
+

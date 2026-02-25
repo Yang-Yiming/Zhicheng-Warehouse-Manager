@@ -21,8 +21,9 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 │   │   ├── operations/                    # Operations log list (paginated, searchable) + FAB → blank new form; reloads on onShow
 │   │   ├── inventory/                     # Current inventory list; tap item → action sheet → pre-filled locked form; FAB → pre-filled 入库 form; reloads on onShow
 │   │   ├── operation-form/                # New/pre-filled operation form (URL params: itemId, itemName, organization, operation, locked); locked=1 renders itemId/organization as readonly; segmented control for 入库/出库; stepper + Min/Max for quantity
-│   │   ├── settings/                      # Display name edit (我的信息) + organizations list management
-│   │   └── profile-setup/                 # First-launch display name setup
+│   │   ├── settings/                      # Role-aware settings: display name + role badge; org management (admin+); user approval/management (admin+); admin promote/demote + chairman transfer (chairman only)
+│   │   ├── profile-setup/                 # First-launch display name setup
+│   │   └── user-orgs-edit/                # Admin edits a specific user's organizations
 │   └── utils/
 │       ├── db.js                          # Cloud DB collection refs + query helpers
 │       ├── validation.js                  # Input validation (required, positiveInt, datetimeFormat, validateOperation)
@@ -36,9 +37,12 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 │   ├── inventoryRebuild/                  # Rebuild inventory by replaying all operations
 │   ├── configGet/                         # Return config doc; seed defaults on first run
 │   ├── configUpdate/                      # Update organizations/operators list
-│   ├── userLogin/                         # Lookup-or-create user by openid on app launch
+│   ├── userLogin/                         # Lookup-or-create user by openid on app launch; returns role
 │   ├── userSetProfile/                    # Save display name (max 20 chars) for logged-in user
-│   └── userSetOrgs/                       # Update user's personal organizations list
+│   ├── userSetOrgs/                       # Update user's organizations (self: admin+ only; proxy: admin+ sets targetOpenid)
+│   ├── userList/                          # List users by role (admin+ only); excludes dismissed unverified
+│   ├── userSetRole/                       # Change user role with permission matrix enforcement
+│   └── chairmanTransfer/                  # Transfer chairman role to an admin
 ├── scripts/
 │   └── sync-local-config.js              # Sync APPID from .env.local into project.config.json
 └── DOCS/
@@ -53,10 +57,16 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
   "openid": "oXXXX...",
   "displayName": "张三",
   "organizations": ["学生会", "团委"],
+  "role": "normal",
+  "dismissed": false,
   "createdAt": "2026-02-25T06:00:00Z",
   "updatedAt": "2026-02-25T06:00:00Z"
 }
 ```
+
+`role` values: `unverified` | `normal` | `admin` | `superadmin` | `chairman`. New users default to `unverified`. Initial `chairman` and `superadmin` are set directly in the database.
+
+`dismissed`: when `true`, the unverified user has been ignored by an admin and will not appear in the application list.
 
 ### `operations`
 ```json

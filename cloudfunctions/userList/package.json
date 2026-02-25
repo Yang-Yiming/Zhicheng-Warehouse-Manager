@@ -1,0 +1,9 @@
+{
+  "name": "userList",
+  "version": "1.0.0",
+  "description": "List users by role (admin+ only)",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

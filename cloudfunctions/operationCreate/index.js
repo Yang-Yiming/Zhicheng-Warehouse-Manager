@@ -38,7 +38,11 @@ exports.main = async (event) => {
     if (users.length === 0 || !users[0].displayName) {
       return { success: false, error: '请先完善个人信息' }
     }
-    const operator = users[0].displayName
+    const user = users[0]
+    if ((user.role || 'unverified') === 'unverified') {
+      return { success: false, error: '权限不足，请联系管理员授权' }
+    }
+    const operator = user.displayName
 
     const { itemId, itemName, operation, organization, quantity, operationTime } = event
 

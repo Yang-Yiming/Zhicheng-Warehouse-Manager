@@ -1,0 +1,9 @@
+{
+  "name": "userSetRole",
+  "version": "1.0.0",
+  "description": "Set user role with permission checks",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}
