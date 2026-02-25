@@ -25,6 +25,7 @@
     </block>
 
     <view wx:if="{{loading}}" class="tip">加载中...</view>
+    <view wx:elif="{{!hasMore && filtered.length > 0}}" class="tip">已加载全部</view>
     <view wx:elif="{{filtered.length === 0 && !loading}}" class="tip">暂无库存</view>
   </view>
 

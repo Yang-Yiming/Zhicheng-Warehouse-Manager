@@ -15,31 +15,30 @@ function isCollectionNotFound(err) {
     || message.includes('Db or Table not exist')
 }
 
-const PAGE_SIZE = 100
+const COUNT_BATCH = 100
 
-async function fetchAllInventory() {
-  let all = []
+async function countAll() {
+  let total = 0
   let skip = 0
-
   while (true) {
-    const { data } = await db.collection('inventory')
-      .orderBy('itemId', 'asc')
-      .skip(skip)
-      .limit(PAGE_SIZE)
-      .get()
-
-    all = all.concat(data)
-    if (data.length < PAGE_SIZE) break
+    const { data } = await db.collection('inventory').skip(skip).limit(COUNT_BATCH).get()
+    total += data.length
+    if (data.length < COUNT_BATCH) break
     skip += data.length
   }
-
-  return all
+  return total
 }
 
-exports.main = async () => {
+exports.main = async (event = {}) => {
+  const page = event.page || 1
+  const pageSize = event.pageSize || 20
+  const skip = (page - 1) * pageSize
   try {
-    const data = await fetchAllInventory()
-    return { success: true, data }
+    const [{ data }, total] = await Promise.all([
+      db.collection('inventory').orderBy('itemId', 'asc').skip(skip).limit(pageSize).get(),
+      countAll(),
+    ])
+    return { success: true, data, total }
   } catch (err) {
     const message = getErrMessage(err)
     const notFound = isCollectionNotFound(err)

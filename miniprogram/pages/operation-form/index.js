@@ -3,7 +3,8 @@ const { callCloud } = require('../../utils/cloud')
 const { showError, showSuccess } = require('../../utils/feedback')
 const { validateOperation } = require('../../utils/validation')
 
-const OPERATIONS = ['入库', '出库', '物资增添', '部分出库']
+const OPERATIONS = ['入库', '出库']
+const db = wx.cloud.database()
 
 Page({
   data: {
@@ -82,33 +83,42 @@ Page({
     this.setData({ timeValue, 'form.operationTime': `${this.data.dateValue} ${timeValue}` })
   },
 
-  onSubmit() {
+  async _resolveOperation(userOp, itemId, organization) {
+    if (userOp === '出库') return '部分出库'
+    const { data } = await db.collection('inventory').where({ itemId, organization }).limit(1).get()
+    return data.length > 0 ? '物资增添' : '入库'
+  },
+
+  async onSubmit() {
     if (this.data.submitting) return
     const { form } = this.data
+    const itemId = form.itemId.trim()
+    const itemName = form.itemName.trim()
     const payload = {
-      itemId: form.itemId.trim(),
-      itemName: form.itemName.trim(),
+      itemId,
+      itemName,
       operation: form.operation,
       organization: form.organization,
       quantity: Number(form.quantity),
       operationTime: form.operationTime,
     }
     const errors = validateOperation(payload)
-
     if (errors.length > 0) {
       showError(errors[0], { modal: true, title: '请检查输入' })
       return
     }
 
     this.setData({ submitting: true })
-    callCloud('operationCreate', payload).then(() => {
+    try {
+      payload.operation = await this._resolveOperation(form.operation, itemId, form.organization)
+      await callCloud('operationCreate', payload)
       this.setData({ submitting: false })
       showSuccess('提交成功')
       this._resetForm()
-    }).catch(err => {
+    } catch (err) {
       this.setData({ submitting: false })
       showError(err.message || '网络错误', { modal: true, title: '提交失败' })
-    })
+    }
   },
 
   _resetForm() {

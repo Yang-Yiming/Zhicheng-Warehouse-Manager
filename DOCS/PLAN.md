@@ -116,3 +116,9 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 
 - [x] Track `project.config.template.json` with placeholder appid and gitignore local `project.config.json`
 - [x] Update `config:sync` script to bootstrap local `project.config.json` from template when missing
+
+## Phase 6.3: Simplified Operation UI ✓
+
+- [x] Reduce user-facing operation types from 4 to 2 (入库 / 出库)
+- [x] Frontend auto-routes: 入库 → checks inventory existence → sends 入库 or 物资增添; 出库 → sends 部分出库
+- [x] Backend unchanged; all 4 real operation types still stored in records

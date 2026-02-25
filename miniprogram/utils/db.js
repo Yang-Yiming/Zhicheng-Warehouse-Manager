@@ -19,10 +19,10 @@ function getOperations(page = 1, pageSize = 20) {
     .get()
 }
 
-// Full inventory list sorted by itemId (via cloud function to bypass permission limits)
-function getInventory() {
-  return callCloud('inventoryList')
-    .then(result => ({ data: result.data || [] }))
+// Paginated inventory list sorted by itemId (via cloud function to bypass permission limits)
+function getInventory(page = 1, pageSize = 20) {
+  return callCloud('inventoryList', { page, pageSize })
+    .then(result => ({ data: result.data || [], total: result.total || 0 }))
 }
 
 // Config document

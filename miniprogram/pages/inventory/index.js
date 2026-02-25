@@ -8,24 +8,34 @@ Page({
     filtered: [],
     searchText: '',
     loading: false,
+    page: 1,
+    hasMore: true,
   },
 
-  onLoad() { this._load() },
-  onShow() { if (this._loaded) this._load() },
-  onPullDownRefresh() { this._load() },
+  onLoad() { this._load(true) },
+  onShow() { if (this._loaded) this._load(true) },
+  onPullDownRefresh() { this._load(true) },
 
-  _load() {
+  onReachBottom() {
+    if (this.data.hasMore && !this.data.loading) this._load(false)
+  },
+
+  _load(reset) {
+    if (this.data.loading) return
+    const page = reset ? 1 : this.data.page
     this.setData({ loading: true })
-    getInventory()
-      .then(res => {
-        this.setData({ inventory: res.data, loading: false })
+
+    getInventory(page, 20)
+      .then(({ data, total }) => {
+        const inventory = reset ? data : [...this.data.inventory, ...data]
+        this.setData({ inventory, page: page + 1, hasMore: inventory.length < total, loading: false })
         this._loaded = true
         this._applyFilter()
-        wx.stopPullDownRefresh()
+        if (reset) wx.stopPullDownRefresh()
       })
       .catch(() => {
         this.setData({ loading: false })
-        wx.stopPullDownRefresh()
+        if (reset) wx.stopPullDownRefresh()
         showError('加载失败')
       })
   },
@@ -47,9 +57,9 @@ Page({
   onItemTap(e) {
     const item = e.currentTarget.dataset.item
     wx.showActionSheet({
-      itemList: ['物资增添', '部分出库', '出库'],
+      itemList: ['入库', '出库'],
       success: (res) => {
-        const ops = ['物资增添', '部分出库', '出库']
+        const ops = ['入库', '出库']
         const op = ops[res.tapIndex]
         wx.navigateTo({
           url: `/pages/operation-form/index?itemId=${encodeURIComponent(item.itemId)}&itemName=${encodeURIComponent(item.itemName)}&organization=${encodeURIComponent(item.organization)}&operation=${encodeURIComponent(op)}&locked=1`
