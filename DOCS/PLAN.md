@@ -58,16 +58,24 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 
 - [x] Settings page: display name editing (existing)
 - [x] Organizations list: add / remove, synced via `configUpdate`
-- [x] Operators list: add / remove, synced via `configUpdate`
+- [x] Operators list: add / remove, synced via `configUpdate` *(UI removed in Phase 6.5; field still stored in DB)*
 
 ## Phase 6.4: Operation Form UI Redesign ✓
 
 - [x] Replace operation type `<picker>` with segmented control (入库 green / 出库 orange)
 - [x] Replace quantity `<input>` with stepper (−/+ buttons + inline input, min 1)
+- [x] Add Min / Max shortcut buttons; Max fetches live inventory stock for 出库 only
 - [x] Restructure layout into card sections (操作类型 / 信息 / 物资 / 数量 / 时间)
 - [x] Page background `#f2f3f7`, card border-radius 16rpx, picker rows with `›` arrow
 - [x] Submit button color follows operation type (green for 入库, orange for 出库)
-- [x] Replace `onOperationChange` with `onSelectOperation`; add `onQuantityStep`
+- [x] Replace `onOperationChange` with `onSelectOperation`; add `onQuantityStep`, `onQuantityMin`, `onQuantityMax`
+
+## Phase 6.5: Settings Cleanup ✓
+
+- [x] Remove operators list UI from settings page (operators are now resolved server-side from `users` collection; manual list is redundant)
+- [x] Settings page now manages: display name (我的信息) + organizations list only
+
+## v0.2.0
 
 ## Phase 5: Polish & Extras
 

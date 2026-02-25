@@ -18,10 +18,10 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 ├── miniprogram/
 │   ├── app.js / app.json / app.wxss      # App entry + login orchestration
 │   ├── pages/
-│   │   ├── operations/                    # Operations log list (paginated, searchable) + FAB → new form
-│   │   ├── inventory/                     # Current inventory list; tap item → action sheet → pre-filled form; FAB → new 入库 form
-│   │   ├── operation-form/                # New/pre-filled operation form (accepts URL params: itemId, itemName, organization, operation, locked)
-│   │   ├── settings/                      # Config management + profile edit
+│   │   ├── operations/                    # Operations log list (paginated, searchable) + FAB → blank new form; reloads on onShow
+│   │   ├── inventory/                     # Current inventory list; tap item → action sheet → pre-filled locked form; FAB → pre-filled 入库 form; reloads on onShow
+│   │   ├── operation-form/                # New/pre-filled operation form (URL params: itemId, itemName, organization, operation, locked); locked=1 renders itemId/organization as readonly; segmented control for 入库/出库; stepper + Min/Max for quantity
+│   │   ├── settings/                      # Display name edit (我的信息) + organizations list management
 │   │   └── profile-setup/                 # First-launch display name setup
 │   └── utils/
 │       ├── db.js                          # Cloud DB collection refs + query helpers
@@ -105,6 +105,8 @@ Business rules enforced by `operationCreate`:
   "operators": ["张三", "李四", ...]
 }
 ```
+
+Note: `operators` field is still stored in DB and seeded by `configGet`, but is no longer managed via the settings UI (operators are resolved server-side from the `users` collection).
 
 Implementation note: cloud functions write config fields (`organizations`, `operators`) into `doc('settings')` without embedding `_id` inside `data`, to avoid first-run write failures during seeding/update.
 
