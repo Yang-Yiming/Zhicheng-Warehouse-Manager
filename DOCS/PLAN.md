@@ -106,6 +106,16 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 - [x] Settings page: role badge in 我的信息; 所属组织/全部组织 hidden for unverified; org editing restricted to admin+; user management sections (申请/全部成员/管理员管理/转让主席) shown based on role
 - [x] New `user-orgs-edit` page — admin edits a specific user's organizations via `userSetOrgs({ targetOpenid })`
 
+## v1.0.0beta
+
+## Phase 6.8: Open Member List to All Verified Users ✓
+
+- [x] `userList` cloud function: permission gate relaxed from admin+ to any non-unverified caller
+- [x] Settings page: "全部成员" section visible to all verified users (role !== 'unverified')
+- [x] Member list now includes all roles (normal / admin / superadmin / chairman) with inline role badge
+- [x] Action buttons (提拔 / 降级 / 转让主席) restricted to chairman only, conditioned on item.role
+- [x] Merged "管理员管理" section into unified "全部成员" list
+
 
 - Operation audit log (monthly logs viewable in-app)
 - Inventory rebuild button (admin)
