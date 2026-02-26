@@ -113,7 +113,7 @@
             <text wx:if="{{item.role === 'normal'}}" class="user-btn promote" bindtap="onPromoteToAdmin" data-openid="{{item.openid}}" data-name="{{item.displayName}}">提拔</text>
             <block wx:if="{{item.role === 'admin'}}">
               <text class="user-btn demote" bindtap="onDemoteToNormal" data-openid="{{item.openid}}" data-name="{{item.displayName}}">降级</text>
-              <text class="user-btn transfer" bindtap="onTransferChairman" data-openid="{{item.openid}}" data-name="{{item.displayName}}">转让主席</text>
+              <text class="user-btn transfer" bindtap="onTransferChairman" data-openid="{{item.openid}}" data-name="{{item.displayName}}">转让大提督</text>
             </block>
           </block>
         </view>

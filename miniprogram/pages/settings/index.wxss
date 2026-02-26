@@ -23,15 +23,15 @@
   color: #fff;
   font-weight: bold;
   text-shadow: 0 1rpx 4rpx rgba(0,0,0,0.35);
-  animation: superadmin-flow 2s linear infinite, superadmin-glow 0.8s ease-in-out infinite alternate;
+  animation: superadmin-flow 2s linear infinite, superadmin-glow 1.5s ease-in-out infinite alternate;
 }
 @keyframes superadmin-flow {
   0%   { background-position: 0% 50%; }
   100% { background-position: 100% 50%; }
 }
 @keyframes superadmin-glow {
-  0%   { box-shadow: 0 0 6rpx 2rpx rgba(255,100,0,0.5); transform: scale(1); }
-  100% { box-shadow: 0 0 18rpx 6rpx rgba(180,0,255,0.7); transform: scale(1.08); }
+  0%   { box-shadow: 0 0 3rpx 1rpx rgba(255,100,0,0.3); }
+  100% { box-shadow: 0 0 7rpx 2rpx rgba(180,0,255,0.4); }
 }
 .role-chairman { background: #fce4ec; color: #880e4f; }
 .user-row { display: flex; align-items: center; padding: 20rpx 0; border-bottom: 1rpx solid #f0f0f0; }

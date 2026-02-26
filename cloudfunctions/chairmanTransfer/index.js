@@ -15,12 +15,12 @@ exports.main = async (event) => {
 
     const { data: callerData } = await db.collection('users').where({ openid: OPENID }).get()
     const callerRole = callerData.length > 0 ? (callerData[0].role || 'unverified') : 'unverified'
-    if (callerRole !== 'chairman') return { success: false, error: '只有主席可以转让主席身份' }
+    if (callerRole !== 'chairman') return { success: false, error: '只有大提督可以转让大提督身份' }
 
     const { data: targetData } = await db.collection('users').where({ openid: targetOpenid }).get()
     if (targetData.length === 0) return { success: false, error: '目标用户不存在' }
     const targetRole = targetData[0].role || 'unverified'
-    if (targetRole !== 'admin') return { success: false, error: '只能将主席身份转让给管理员' }
+    if (targetRole !== 'admin') return { success: false, error: '只能将大提督身份转让给管理员' }
 
     const now = new Date().toISOString()
     await Promise.all([

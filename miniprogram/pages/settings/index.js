@@ -6,8 +6,8 @@ const ROLE_LABELS = {
   unverified: '未认证',
   normal: '普通',
   admin: '管理员',
-  superadmin: '牛马站长',
-  chairman: '主席',
+  superadmin: '超管',
+  chairman: '大提督',
 }
 
 Page({
@@ -209,8 +209,8 @@ Page({
   onTransferChairman(e) {
     const { openid, name } = e.currentTarget.dataset
     wx.showModal({
-      title: '转让主席',
-      content: `确认将主席身份转让给 ${name}？此操作不可撤销。`,
+      title: '转让大提督',
+      content: `确认将大提督身份转让给 ${name}？此操作不可撤销。`,
       success: (res) => {
         if (!res.confirm) return
         callCloud('chairmanTransfer', { targetOpenid: openid })

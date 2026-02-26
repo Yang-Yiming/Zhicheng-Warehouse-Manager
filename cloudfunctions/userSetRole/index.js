@@ -23,7 +23,7 @@ exports.main = async (event) => {
     if (targetData.length === 0) return { success: false, error: '用户不存在' }
     const targetRole = targetData[0].role || 'unverified'
 
-    if (targetRole === 'superadmin') return { success: false, error: '不能修改牛马站长的角色' }
+    if (targetRole === 'superadmin') return { success: false, error: '不能修改超管的角色' }
 
     // dismissed: set dismissed flag, don't change role
     if (newRole === 'dismissed') {
