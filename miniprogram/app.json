@@ -4,6 +4,7 @@
     "pages/inventory/index",
     "pages/operation-form/index",
     "pages/settings/index",
+    "pages/other/index",
     "pages/profile-setup/index",
     "pages/user-orgs-edit/index"
   ],

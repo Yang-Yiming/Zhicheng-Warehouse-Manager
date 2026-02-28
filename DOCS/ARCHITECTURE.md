@@ -22,6 +22,7 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 │   │   ├── inventory/                     # Current inventory list; tap item → action sheet → pre-filled locked form; FAB → pre-filled 入库 form; reloads on onShow
 │   │   ├── operation-form/                # New/pre-filled operation form (URL params: itemId, itemName, organization, operation, locked); locked=1 renders itemId/organization as readonly; segmented control for 入库/出库; itemId blur auto-lookup fills itemName; 出库 requires item existence and enables Max=current stock
 │   │   ├── settings/                      # Role-aware settings: display name + role badge; org management (admin+); user approval/management (admin+); admin promote/demote + chairman transfer (chairman only)
+│   │   ├── other/                         # Contact page shown from settings "联系" entry; static contact information with one-tap copy buttons (GitHub/email)
 │   │   ├── profile-setup/                 # First-launch display name setup
 │   │   └── user-orgs-edit/                # Admin edits a specific user's organizations
 │   └── utils/

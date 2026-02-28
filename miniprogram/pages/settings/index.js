@@ -224,5 +224,9 @@ Page({
       }
     })
   },
+
+  onOpenOther() {
+    wx.navigateTo({ url: '/pages/other/index' })
+  },
 })
 

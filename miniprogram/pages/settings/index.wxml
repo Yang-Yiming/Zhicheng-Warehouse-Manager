@@ -120,5 +120,12 @@
       </view>
     </view>
   </block>
+
+  <view class="section-title">其他</view>
+  <view class="card">
+    <view class="field nav-item" bindtap="onOpenOther">
+      <text class="label">联系</text>
+    </view>
+  </view>
 </view>
 

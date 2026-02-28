@@ -108,6 +108,13 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 
 ## v1.0.0beta
 
+## Phase 6.10: Settings Other/Contact Entry ✓
+
+- [x] Add a new "其他" entry at the bottom of settings page
+- [x] Rename the settings entry text to "联系"
+- [x] Add `pages/other` page with static contact information display and one-tap copy buttons (GitHub/email)
+- [x] Default template includes contact info: `12411332@mail.sustech.edu.cn`
+
 ## Phase 6.9: Operation Form Item-ID Assisted Validation ✓
 
 - [x] Add `inventoryGet` cloud function for single-item inventory lookup (optional organization filter)

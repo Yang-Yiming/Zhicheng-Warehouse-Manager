@@ -1,0 +1,25 @@
+<view class="page">
+  <view class="card">
+    <text class="h1">Github</text>
+    <view class="line-row">
+      <text class="small">https://github.com/Yang-Yiming/Zhicheng-Warehouse-Manager</text>
+      <view class="copy-btn" bindtap="onCopy" data-text="https://github.com/Yang-Yiming/Zhicheng-Warehouse-Manager" aria-label="复制 Github 链接">
+        <view class="copy-icon">
+          <view class="copy-square back"></view>
+          <view class="copy-square front"></view>
+        </view>
+      </view>
+    </view>
+    <text class="line">欢迎提 issue 和 PR, 也可以给我点个 star 🥺</text>
+    <text class="h1"> 其他 </text>
+    <view class="line-row">
+      <text class="small">也可以联系 12411332@mail.sustech.edu.cn</text>
+      <view class="copy-btn" bindtap="onCopy" data-text="12411332@mail.sustech.edu.cn" aria-label="复制邮箱">
+        <view class="copy-icon">
+          <view class="copy-square back"></view>
+          <view class="copy-square front"></view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
