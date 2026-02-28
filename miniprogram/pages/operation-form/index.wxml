@@ -38,9 +38,10 @@
       <view wx:if="{{locked}}" class="field-val"><text class="readonly">{{form.itemId}}</text></view>
       <input wx:else class="input" placeholder="如 A1-3-05" value="{{form.itemId}}" bindinput="onItemIdInput" bindblur="onItemIdBlur" />
     </view>
+    <view wx:if="{{form.operation === '出库' && itemIdError}}" class="field-error">{{itemIdError}}</view>
     <view class="field no-border">
       <text class="label required">物品名称</text>
-      <input class="input" placeholder="如 折叠桌" value="{{form.itemName}}" bindinput="onItemNameInput" />
+      <input class="input {{(form.operation === '出库' || itemFound) ? 'input-disabled' : ''}}" placeholder="如 折叠桌" value="{{form.itemName}}" bindinput="onItemNameInput" disabled="{{locked || form.operation === '出库' || itemFound}}" />
     </view>
   </view>
 
@@ -80,5 +81,5 @@
     </view>
   </view>
 
-  <button class="submit-btn {{form.operation === '出库' ? 'btn-out' : 'btn-in'}}" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">提交</button>
+  <button class="submit-btn {{form.operation === '出库' ? 'btn-out' : 'btn-in'}}" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting || (form.operation === '出库' && !itemFound)}}">提交</button>
 </view>

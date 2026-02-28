@@ -4,7 +4,6 @@ const { showError, showSuccess } = require('../../utils/feedback')
 const { validateOperation } = require('../../utils/validation')
 
 const OPERATIONS = ['入库', '出库']
-const db = wx.cloud.database()
 
 Page({
   data: {
@@ -18,6 +17,8 @@ Page({
     submitting: false,
     locked: false,
     maxQuantity: null,
+    itemFound: false,   // true when blur lookup matched an inventory record
+    itemIdError: '',    // non-empty only for 出库 when lookup fails
     OPERATIONS,
   },
 
@@ -37,7 +38,6 @@ Page({
     }
 
     this.setData(updates)
-    if (updates['form.operation'] === '出库') this._fetchMaxQuantity()
     app.onLoginReady(user => {
       if ((user.role || 'unverified') === 'unverified') {
         showError('权限不足，请联系管理员授权', { modal: true, title: '无权限' })
@@ -48,10 +48,10 @@ Page({
       const orgs = Array.isArray(user.organizations) ? user.organizations : []
       if (orgs.length > 0 && !isLocked) {
         this.setData({ organizations: orgs, orgIndex: 0, 'form.organization': orgs[0] })
-        if (updates['form.operation'] === '出库') this._fetchMaxQuantity()
       } else {
         this.setData({ organizations: orgs })
       }
+      this._syncItemById()
     })
     this._initDateTime()
   },
@@ -64,17 +64,19 @@ Page({
     this.setData({ dateValue, timeValue, 'form.operationTime': `${dateValue} ${timeValue}` })
   },
 
-  onItemIdInput(e) { this.setData({ 'form.itemId': e.detail.value }) },
-  onItemIdBlur() { if (this.data.form.operation === '出库') this._fetchMaxQuantity() },
+  onItemIdInput(e) {
+    // reset lookup state on every keystroke so stale results don't linger
+    this.setData({ 'form.itemId': e.detail.value, itemFound: false, itemIdError: '', maxQuantity: null })
+  },
+  onItemIdBlur() { this._syncItemById() },
   onItemNameInput(e) { this.setData({ 'form.itemName': e.detail.value }) },
   onQuantityInput(e) { this.setData({ 'form.quantity': e.detail.value }) },
 
   onSelectOperation(e) {
     const op = e.currentTarget.dataset.op
     const idx = OPERATIONS.indexOf(op)
-    this.setData({ operationIndex: idx, 'form.operation': op })
-    if (op === '出库') this._fetchMaxQuantity()
-    else this.setData({ maxQuantity: null })
+    this.setData({ operationIndex: idx, 'form.operation': op, maxQuantity: null, itemIdError: '', itemFound: false })
+    this._syncItemById()
   },
 
   onQuantityStep(e) {
@@ -95,7 +97,7 @@ Page({
   onOrgChange(e) {
     const idx = Number(e.detail.value)
     this.setData({ orgIndex: idx, 'form.organization': this.data.organizations[idx] })
-    if (this.data.form.operation === '出库') this._fetchMaxQuantity()
+    this._syncItemById()
   },
 
   onDateChange(e) {
@@ -108,25 +110,69 @@ Page({
     this.setData({ timeValue, 'form.operationTime': `${this.data.dateValue} ${timeValue}` })
   },
 
-  async _fetchMaxQuantity() {
+  // Query inventory by exact itemId. Updates itemName, maxQuantity, itemFound, itemIdError.
+  async _syncItemById() {
     const { form } = this.data
-    if (!form.itemId || !form.organization) { this.setData({ maxQuantity: null }); return }
+    const itemId = (form.itemId || '').trim()
+    const isOutbound = form.operation === '出库'
+
+    if (!form.operation) return
+
+    if (!itemId) {
+      this.setData({ itemFound: false, itemIdError: '', maxQuantity: null })
+      return
+    }
+
+    if (isOutbound && !form.organization) {
+      this.setData({ itemFound: false, itemIdError: '', maxQuantity: null })
+      return
+    }
+
+    // Sequence guard: ignore responses from superseded requests
+    this._lookupSeq = (this._lookupSeq || 0) + 1
+    const seq = this._lookupSeq
+
     try {
-      const { data } = await db.collection('inventory').where({ itemId: form.itemId, organization: form.organization }).limit(1).get()
-      this.setData({ maxQuantity: data.length > 0 ? data[0].quantity : null })
-    } catch {
-      this.setData({ maxQuantity: null })
+      const res = await callCloud('inventoryGet', {
+        itemId,
+        organization: isOutbound ? form.organization : undefined,
+      })
+      if (seq !== this._lookupSeq) return
+
+      if (res.found && res.data) {
+        this.setData({
+          'form.itemName': res.data.itemName,
+          maxQuantity: isOutbound ? res.data.quantity : null,
+          itemFound: true,
+          itemIdError: '',
+        })
+      } else {
+        this.setData({
+          itemFound: false,
+          itemIdError: isOutbound ? '物资编号不存在' : '',
+          maxQuantity: null,
+        })
+      }
+    } catch (e) {
+      if (seq !== this._lookupSeq) return
+      this.setData({
+        itemFound: false,
+        itemIdError: isOutbound ? '物资编号校验失败，请重试' : '',
+        maxQuantity: null,
+      })
     }
   },
 
   async _resolveOperation(userOp, itemId, organization) {
     if (userOp === '出库') return '部分出库'
-    const { data } = await db.collection('inventory').where({ itemId, organization }).limit(1).get()
-    return data.length > 0 ? '物资增添' : '入库'
+    const res = await callCloud('inventoryGet', { itemId, organization })
+    return res.found ? '物资增添' : '入库'
   },
 
   async onSubmit() {
     if (this.data.submitting) return
+    // Outbound requires a confirmed item lookup
+    if (this.data.form.operation === '出库' && !this.data.itemFound) return
     const { form } = this.data
     const itemId = form.itemId.trim()
     const itemName = form.itemName.trim()
@@ -163,6 +209,7 @@ Page({
       'form.itemId': '', 'form.itemName': '', 'form.operation': '',
       'form.organization': '', 'form.quantity': '',
       operationIndex: -1, orgIndex: -1, maxQuantity: null,
+      itemFound: false, itemIdError: '',
     })
   },
 })

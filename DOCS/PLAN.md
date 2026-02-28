@@ -108,6 +108,16 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 
 ## v1.0.0beta
 
+## Phase 6.9: Operation Form Item-ID Assisted Validation ✓
+
+- [x] Add `inventoryGet` cloud function for single-item inventory lookup (optional organization filter)
+- [x] On item ID blur, query inventory via cloud function (no frontend direct DB query)
+- [x] Auto-fill item name when item is found (both 入库 / 出库)
+- [x] Outbound only: if item ID is non-empty but not found, show inline error under item ID and disable submit
+- [x] Outbound only: if item ID is empty, do not show error but keep submit disabled
+- [x] Keep existing max button behavior: sets quantity to current stock for found outbound item
+- [x] Item name input is readonly in 出库 mode; in 入库 mode it becomes readonly after item ID lookup hits an existing item
+
 ## Phase 6.8: Open Member List to All Verified Users ✓
 
 - [x] `userList` cloud function: permission gate relaxed from admin+ to any non-unverified caller

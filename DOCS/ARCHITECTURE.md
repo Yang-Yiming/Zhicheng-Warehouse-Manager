@@ -20,7 +20,7 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 │   ├── pages/
 │   │   ├── operations/                    # Operations log list (paginated, searchable) + FAB → blank new form; reloads on onShow
 │   │   ├── inventory/                     # Current inventory list; tap item → action sheet → pre-filled locked form; FAB → pre-filled 入库 form; reloads on onShow
-│   │   ├── operation-form/                # New/pre-filled operation form (URL params: itemId, itemName, organization, operation, locked); locked=1 renders itemId/organization as readonly; segmented control for 入库/出库; stepper + Min/Max for quantity
+│   │   ├── operation-form/                # New/pre-filled operation form (URL params: itemId, itemName, organization, operation, locked); locked=1 renders itemId/organization as readonly; segmented control for 入库/出库; itemId blur auto-lookup fills itemName; 出库 requires item existence and enables Max=current stock
 │   │   ├── settings/                      # Role-aware settings: display name + role badge; org management (admin+); user approval/management (admin+); admin promote/demote + chairman transfer (chairman only)
 │   │   ├── profile-setup/                 # First-launch display name setup
 │   │   └── user-orgs-edit/                # Admin edits a specific user's organizations
@@ -34,6 +34,7 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 │   ├── operationCreate/                   # Validate + write operation, update inventory
 │   ├── operationsList/                    # Paginated operations list sorted by submitTime desc
 │   ├── inventoryList/                     # Full paginated inventory sorted by itemId
+│   ├── inventoryGet/                      # Single inventory lookup by itemId (+ optional organization)
 │   ├── inventoryRebuild/                  # Rebuild inventory by replaying all operations
 │   ├── configGet/                         # Return config doc; seed defaults on first run
 │   ├── configUpdate/                      # Update organizations/operators list
@@ -148,6 +149,16 @@ User fills form → validate on client → call cloud function operationCreate
   → update `inventory` collection (add/remove/modify)
   → return success/failure
 ```
+
+`operation-form` item-id assist flow:
+- On `itemId` blur:
+  - Query `inventoryGet` cloud function by `itemId`
+  - `出库`: query with `(itemId, organization)`; found → auto-fill `itemName` + set `maxQuantity`; not found (non-empty id) → show inline error under itemId + disable submit
+  - `入库`: query with `itemId`; found → auto-fill `itemName`; not found does not block submit
+- For `出库`, empty `itemId` keeps submit disabled but does not show inline error
+- Item name editability:
+  - `出库`: item name input is readonly
+  - `入库`: item name is editable until itemId lookup hits existing inventory; after hit it becomes readonly
 
 ### Inventory Rebuild
 ```

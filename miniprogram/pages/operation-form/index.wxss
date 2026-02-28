@@ -21,6 +21,8 @@
 .readonly { flex: 1; font-size: 28rpx; color: #999; }
 .field-val { flex: 1; }
 .input { flex: 1; font-size: 28rpx; color: #333; }
+.input-disabled { color: #999; }
+.field-error { padding: 0 0 16rpx 160rpx; color: #f44336; font-size: 24rpx; }
 
 /* Picker */
 .picker-wrap { flex: 1; }
