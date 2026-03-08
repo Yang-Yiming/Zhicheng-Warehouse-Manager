@@ -40,6 +40,10 @@
       {
         "value": "private.*.key",
         "type": "glob"
+      },
+      {
+        "value": "miniprogram_npm/**/*",
+        "type": "glob"
       }
     ],
     "include": []

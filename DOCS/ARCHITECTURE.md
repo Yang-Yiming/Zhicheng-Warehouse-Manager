@@ -30,7 +30,8 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 │       ├── validation.js                  # Input validation (required, positiveInt, datetimeFormat, validateOperation)
 │       ├── cloud.js                       # Unified cloud function caller (callCloud)
 │       ├── search.js                      # Shared full-text filtering helper (filterByQuery)
-│       └── feedback.js                    # Shared user feedback helper (showError, showSuccess)
+│       ├── feedback.js                    # Shared user feedback helper (showError, showSuccess)
+│       └── excel.js                       # SheetJS wrapper: format detection, parse, export, file I/O
 ├── cloudfunctions/
 │   ├── operationCreate/                   # Validate + write operation, update inventory
 │   ├── operationsList/                    # Paginated operations list sorted by submitTime desc
@@ -44,7 +45,9 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 │   ├── userSetOrgs/                       # Update user's organizations (self: admin+ only; proxy: admin+ sets targetOpenid)
 │   ├── userList/                          # List users by role (admin+ only); excludes dismissed unverified
 │   ├── userSetRole/                       # Change user role with permission matrix enforcement
-│   └── chairmanTransfer/                  # Transfer chairman role to an admin
+│   ├── chairmanTransfer/                  # Transfer chairman role to an admin
+│   ├── dataExport/                        # Export all operations + inventory (verified users)
+│   └── dataImport/                        # Import data with full overwrite (chairman only)
 ├── scripts/
 │   └── sync-local-config.js              # Sync APPID from .env.local into project.config.json
 └── DOCS/
@@ -173,6 +176,28 @@ Admin triggers rebuild → cloud function inventoryRebuild
 
 `inventoryList` uses paginated reads (page size 100) to return the full inventory sorted by `itemId`, bypassing the Cloud DB default 20-record fetch limit.
 
+### Data Export/Import
+
+```
+Export (verified users):
+  Settings → callCloud('dataExport')
+  → cloud function paginates all operations + inventory, strips _id
+  → frontend builds xlsx with SheetJS (two sheets: 操作记录 + 库存状态)
+  → writeAndShare → wx.shareFileMessage or wx.openDocument
+
+Import (chairman only):
+  Settings → wx.chooseMessageFile → readXlsxFile → detectFormat
+  → format detection:
+    - 'miniprogram' (two sheets 操作记录+库存状态) → full restore
+    - 'old_inventory' (single sheet with 最后操作 header) → inventory import
+    - 'old_operations' → reject with message
+    - 'unknown' → reject with message
+  → wx.showModal confirm → callCloud('dataImport', { mode, operations?, inventory? })
+  → cloud function deletes all operations + inventory, then batch-inserts imported data
+```
+
+`dataImport` mode `old_inventory` creates both inventory records and corresponding operation records (operation=覆盖导入) for audit trail.
+
 Cloud functions handling collection bootstrap (`operationsList`, `inventoryList`, `operationCreate`, `inventoryRebuild`) treat CloudBase missing-collection errors via both error code (`-502005`) and message variants (`collection not exists`, `Db or Table not exist`, `does not exist`) because different runtimes return different wording.
 
 ### `db.js` helper notes
@@ -189,3 +214,4 @@ Cloud functions handling collection bootstrap (`operationsList`, `inventoryList`
 4. **Single config document** — organizations and operators stored in one doc for simplicity; all users read the same config
 5. **Shared frontend utilities** — cloud function invocation and search filtering are centralized in `utils/cloud.js` and `utils/search.js` to reduce duplicated page logic
 6. **Consistent feedback UX** — common toast/modal behavior is centralized in `utils/feedback.js` to avoid repetitive per-page error handling code
+7. **Pre-built mini bundle over npm** — SheetJS is included as a pre-built `libs/xlsx.mini.min.js` (245KB) instead of a full npm install (~7MB with codepage dependencies). `miniprogram_npm/` is gitignored and excluded via `packOptions` to prevent accidental size bloat
