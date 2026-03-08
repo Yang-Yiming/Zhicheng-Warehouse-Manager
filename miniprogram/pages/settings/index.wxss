@@ -54,4 +54,5 @@
 .nav-item .label { width: auto; flex: 1; }
 .nav-item::after { content: '›'; color: #ccc; font-size: 36rpx; margin-left: 12rpx; }
 .import-warn { font-size: 22rpx; color: #f44336; flex-shrink: 0; margin-left: 12rpx; }
+.version-text { text-align: center; font-size: 24rpx; color: #bbb; padding: 32rpx 0 16rpx; }
 
