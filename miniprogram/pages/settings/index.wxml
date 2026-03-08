@@ -121,6 +121,22 @@
     </view>
   </block>
 
+  <!-- 数据管理 (非未认证) -->
+  <block wx:if="{{role !== 'unverified'}}">
+    <view class="section-title">数据管理</view>
+    <view class="card">
+      <view class="field nav-item" bindtap="onExportExcel">
+        <text class="label">📤 导出为 Excel</text>
+      </view>
+      <block wx:if="{{isChairman}}">
+        <view class="field nav-item" bindtap="onImportExcel">
+          <text class="label">📥 导入并覆盖</text>
+          <text class="import-warn">仅大提督</text>
+        </view>
+      </block>
+    </view>
+  </block>
+
   <view class="section-title">其他</view>
   <view class="card">
     <view class="field nav-item" bindtap="onOpenOther">

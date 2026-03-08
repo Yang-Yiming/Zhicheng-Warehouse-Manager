@@ -51,4 +51,7 @@
 .user-name-row { display: flex; align-items: center; gap: 10rpx; }
 .badge-sm { font-size: 20rpx; padding: 2rpx 12rpx; }
 .nav-item { justify-content: space-between; }
+.nav-item .label { width: auto; flex: 1; }
+.nav-item::after { content: '›'; color: #ccc; font-size: 36rpx; margin-left: 12rpx; }
+.import-warn { font-size: 22rpx; color: #f44336; flex-shrink: 0; margin-left: 12rpx; }
 
