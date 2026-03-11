@@ -2,6 +2,10 @@
 
 Enhanced miniprogram version of the [Warehouse Manager](https://github.com/Yang-Yiming/Warehouse_manager).
 
+**Code**
+
+<img src="./assets/README/QRcode.jpeg"  width="80%">
+
 # Manual ([Chinese ver](#说明书))
 
 ## Users
