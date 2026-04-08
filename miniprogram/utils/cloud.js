@@ -1,13 +1,65 @@
-function callCloud(name, data = {}) {
-  return wx.cloud.callFunction({ name, data }).then(res => {
-    const result = (res && res.result) || {}
-    if (result.success === false) {
-      const err = new Error(result.error || '请求失败')
-      err.result = result
-      throw err
-    }
-    return result
+let runtimeConfig
+
+try {
+  runtimeConfig = require('./runtime-config')
+} catch (_) {
+  runtimeConfig = require('./runtime-config.template')
+}
+
+const { functionsBaseUrl } = runtimeConfig
+
+const SESSION_STORAGE_KEY = 'wm_session_token'
+
+function getSessionToken() {
+  try {
+    return wx.getStorageSync(SESSION_STORAGE_KEY) || ''
+  } catch (_) {
+    return ''
+  }
+}
+
+function setSessionToken(token) {
+  wx.setStorageSync(SESSION_STORAGE_KEY, token || '')
+}
+
+function clearSessionToken() {
+  try {
+    wx.removeStorageSync(SESSION_STORAGE_KEY)
+  } catch (_) {
+    wx.setStorageSync(SESSION_STORAGE_KEY, '')
+  }
+}
+
+function callCloud(name, data = {}, options = {}) {
+  const { skipAuth = false } = options
+  const token = getSessionToken()
+  const headers = { 'content-type': 'application/json' }
+
+  if (!skipAuth && token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: `${functionsBaseUrl}/${name}`,
+      method: 'POST',
+      data,
+      header: headers,
+      success: res => {
+        const result = (res && res.data) || {}
+        if (res.statusCode >= 400 || result.success === false) {
+          if (res.statusCode === 401) clearSessionToken()
+          const err = new Error(result.error || '请求失败')
+          err.result = result
+          err.statusCode = res.statusCode
+          reject(err)
+          return
+        }
+        resolve(result)
+      },
+      fail: err => reject(new Error((err && err.errMsg) || '网络请求失败')),
+    })
   })
 }
 
-module.exports = { callCloud }
+module.exports = { callCloud, getSessionToken, setSessionToken, clearSessionToken }

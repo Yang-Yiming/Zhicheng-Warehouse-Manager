@@ -22,6 +22,5 @@
     "backgroundTextStyle": "light"
   },
   "sitemapLocation": "sitemap.json",
-  "cloud": true,
   "lazyCodeLoading": "requiredComponents"
 }

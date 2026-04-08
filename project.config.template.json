@@ -2,7 +2,6 @@
   "appid": "your-app-id",
   "compileType": "miniprogram",
   "miniprogramRoot": "miniprogram/",
-  "cloudfunctionRoot": "cloudfunctions/",
   "setting": {
     "es6": true,
     "enhance": true,

@@ -1,7 +1,6 @@
 const app = getApp()
 const { callCloud } = require('../../utils/cloud')
 const { showError, showSuccess } = require('../../utils/feedback')
-const { detectFormat, parseMiniprogramFormat, parseOldInventory, buildExportWorkbook, readXlsxFile, writeAndShare } = require('../../utils/excel')
 
 const ROLE_LABELS = {
   unverified: '未认证',
@@ -227,82 +226,6 @@ Page({
     })
   },
 
-  // --- Data export/import ---
-  onExportExcel() {
-    wx.showLoading({ title: '正在导出...' })
-    callCloud('dataExport')
-      .then(result => {
-        const wb = buildExportWorkbook(result.operations || [], result.inventory || [])
-        const now = new Date()
-        const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
-        return writeAndShare(wb, `仓库数据_${ts}.xlsx`)
-      })
-      .catch(err => showError(err.message || '导出失败'))
-      .then(() => wx.hideLoading())
-  },
-
-  onImportExcel() {
-    wx.chooseMessageFile({
-      count: 1,
-      type: 'file',
-      extension: ['xlsx'],
-      success: res => {
-        const filePath = res.tempFiles[0].path
-        wx.showLoading({ title: '解析文件...' })
-        readXlsxFile(filePath)
-          .then(wb => {
-            wx.hideLoading()
-            const format = detectFormat(wb)
-            if (format === 'old_operations') {
-              showError('请上传库存数据文件，而非操作记录文件', { modal: true, title: '格式错误' })
-              return
-            }
-            if (format === 'unknown') {
-              showError('无法识别的文件格式，请上传小程序导出或旧版库存导出的xlsx文件', { modal: true, title: '格式错误' })
-              return
-            }
-            this._confirmAndImport(wb, format)
-          })
-          .catch(err => {
-            wx.hideLoading()
-            showError(err.message || '文件解析失败', { modal: true })
-          })
-      },
-    })
-  },
-
-  _confirmAndImport(wb, format) {
-    wx.showModal({
-      title: '警告',
-      content: '此操作将清空当前所有数据并用导入的数据替换，操作不可撤销。确定继续？',
-      confirmColor: '#f44336',
-      success: res => {
-        if (!res.confirm) return
-        wx.showLoading({ title: '正在导入...' })
-
-        let cloudData
-        if (format === 'miniprogram') {
-          const parsed = parseMiniprogramFormat(wb)
-          cloudData = { mode: 'full', operations: parsed.operations, inventory: parsed.inventory }
-        } else {
-          const parsed = parseOldInventory(wb)
-          cloudData = { mode: 'old_inventory', inventory: parsed.inventory }
-        }
-
-        callCloud('dataImport', cloudData)
-          .then(result => {
-            wx.hideLoading()
-            const total = (result.importedOperations || 0) + (result.importedInventory || 0)
-            showSuccess(`导入成功，共${total}条`)
-          })
-          .catch(err => {
-            wx.hideLoading()
-            showError(err.message || '导入失败', { modal: true })
-          })
-      },
-    })
-  },
-
   onToggleMembers() {
     this.setData({ membersExpanded: !this.data.membersExpanded })
   },
@@ -311,4 +234,3 @@ Page({
     wx.navigateTo({ url: '/pages/other/index' })
   },
 })
-

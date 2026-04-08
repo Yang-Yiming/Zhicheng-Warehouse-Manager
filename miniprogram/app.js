@@ -1,33 +1,40 @@
-const { callCloud } = require('./utils/cloud')
+const { callCloud, setSessionToken, clearSessionToken } = require('./utils/cloud')
 
 App({
   globalData: {
     currentUser: null,
     loginReady: false,
     _loginCallbacks: [],
+    sessionToken: '',
   },
 
   onLaunch() {
-    wx.cloud.init({
-      env: 'cloudbase-7g480302495d5794',
-      traceUser: true,
-    })
     this._doLogin()
   },
 
   _doLogin() {
     wx.login({
-      success: () => {
-        callCloud('userLogin')
+      success: (res) => {
+        if (!res.code) {
+          this._showRetry()
+          return
+        }
+        callCloud('userLogin', { code: res.code }, { skipAuth: true })
           .then(result => {
-            const { isNew, user } = result
+            const { isNew, user, sessionToken } = result
+            this.globalData.currentUser = user
+            this.globalData.sessionToken = sessionToken || ''
+            setSessionToken(sessionToken || '')
             if (isNew || !user.displayName) {
               wx.navigateTo({ url: '/pages/profile-setup/index' })
             } else {
               this._setLoginReady(user)
             }
           })
-          .catch(() => this._showRetry())
+          .catch(() => {
+            clearSessionToken()
+            this._showRetry()
+          })
       },
       fail: () => this._showRetry(),
     })

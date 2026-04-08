@@ -1,0 +1,4 @@
+project_id = "warehouse-manager-miniprogram"
+
+[functions.api]
+verify_jwt = false

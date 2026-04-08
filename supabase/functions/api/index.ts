@@ -1,0 +1,598 @@
+import { createClient } from 'npm:@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
+const DEFAULT_ORGANIZATIONS = [
+  '学生会',
+  '团委',
+  '学生发展中心',
+  '社区管理委员会',
+  '"橙光"志愿服务队',
+  '足球队器材存放',
+  '篮球队器材存放',
+  '其他体育器材存放',
+  '备用储物箱',
+]
+
+const ADMIN_ROLES = ['admin', 'superadmin', 'chairman']
+const VERIFIED_ROLES = ['normal', 'admin', 'superadmin', 'chairman']
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
+
+class HttpError extends Error {
+  status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+  }
+}
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json',
+    },
+  })
+}
+
+function ok(body: Record<string, unknown>, status = 200) {
+  return json({ success: true, ...body }, status)
+}
+
+function fail(message: string, status = 400, extra: Record<string, unknown> = {}) {
+  return json({ success: false, error: message, ...extra }, status)
+}
+
+function env(name: string) {
+  const value = Deno.env.get(name)
+  if (!value) throw new Error(`Missing env: ${name}`)
+  return value
+}
+
+function getAdminClient() {
+  return createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+}
+
+function nowIso() {
+  return new Date().toISOString()
+}
+
+function getRoute(req: Request) {
+  const parts = new URL(req.url).pathname.split('/').filter(Boolean)
+  const apiIndex = parts.lastIndexOf('api')
+  const route = apiIndex >= 0 ? parts.slice(apiIndex + 1).join('/') : parts[parts.length - 1]
+  return `/${route || ''}`
+}
+
+async function readBody(req: Request) {
+  try {
+    return await req.json()
+  } catch (_) {
+    return {}
+  }
+}
+
+function normalizeArray(values: unknown) {
+  if (!Array.isArray(values)) return []
+  return [...new Set(values.map(v => String(v || '').trim()).filter(Boolean))]
+}
+
+function formatUser(user: Record<string, unknown> | null) {
+  if (!user) return null
+  return {
+    openid: String(user.openid || ''),
+    displayName: String(user.display_name || ''),
+    organizations: normalizeArray(user.organizations),
+    role: String(user.role || 'unverified'),
+  }
+}
+
+function formatOperation(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    submitTime: row.submit_time,
+    itemId: row.item_id,
+    itemName: row.item_name,
+    operation: row.operation,
+    organization: row.organization,
+    quantity: row.quantity,
+    operationTime: row.operation_time,
+    operator: row.operator,
+    submitter: row.submitter,
+    operatorOpenid: row.operator_openid,
+  }
+}
+
+function formatInventory(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    itemId: row.item_id,
+    itemName: row.item_name,
+    organization: row.organization,
+    quantity: row.quantity,
+    lastOperation: row.last_operation,
+    lastOperator: row.last_operator,
+    lastOperationTime: row.last_operation_time,
+    notes: row.notes || '',
+  }
+}
+
+function formatConfig(row: Record<string, unknown> | null) {
+  const data = row || {}
+  return {
+    organizations: normalizeArray(data.organizations || DEFAULT_ORGANIZATIONS),
+    operators: normalizeArray(data.operators),
+  }
+}
+
+async function sha256(input: string) {
+  const data = new TextEncoder().encode(input)
+  const digest = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+function getBearerToken(req: Request) {
+  const value = req.headers.get('Authorization') || ''
+  const match = value.match(/^Bearer\s+(.+)$/i)
+  return match ? match[1].trim() : ''
+}
+
+async function requireUser(req: Request, supabase: ReturnType<typeof getAdminClient>) {
+  const token = getBearerToken(req)
+  if (!token) throw new HttpError(401, '登录已失效，请重新进入小程序')
+
+  const tokenHash = await sha256(token)
+  const { data: session, error: sessionError } = await supabase
+    .from('mini_sessions')
+    .select('openid, expires_at')
+    .eq('token_hash', tokenHash)
+    .maybeSingle()
+
+  if (sessionError) throw sessionError
+  if (!session) throw new HttpError(401, '登录已失效，请重新进入小程序')
+  if (new Date(String(session.expires_at)).getTime() <= Date.now()) {
+    await supabase.from('mini_sessions').delete().eq('token_hash', tokenHash)
+    throw new HttpError(401, '登录已过期，请重新进入小程序')
+  }
+
+  const { data: user, error: userError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('openid', session.openid)
+    .maybeSingle()
+
+  if (userError) throw userError
+  if (!user) throw new HttpError(401, '用户不存在，请重新登录')
+
+  await supabase
+    .from('mini_sessions')
+    .update({ expires_at: new Date(Date.now() + SESSION_TTL_MS).toISOString(), updated_at: nowIso() })
+    .eq('token_hash', tokenHash)
+
+  return { user }
+}
+
+function assertVerified(user: Record<string, unknown>) {
+  if (!VERIFIED_ROLES.includes(String(user.role || 'unverified'))) {
+    throw new HttpError(403, '权限不足，请联系管理员授权')
+  }
+}
+
+function assertAdmin(user: Record<string, unknown>) {
+  if (!ADMIN_ROLES.includes(String(user.role || 'unverified'))) {
+    throw new HttpError(403, '权限不足')
+  }
+}
+
+async function ensureConfig(supabase: ReturnType<typeof getAdminClient>) {
+  const { data, error } = await supabase.rpc('ensure_default_config')
+  if (error) throw error
+  return data
+}
+
+async function fetchWechatOpenId(code: string) {
+  const appid = env('WECHAT_APPID')
+  const secret = env('WECHAT_APP_SECRET')
+  const url = new URL('https://api.weixin.qq.com/sns/jscode2session')
+  url.searchParams.set('appid', appid)
+  url.searchParams.set('secret', secret)
+  url.searchParams.set('js_code', code)
+  url.searchParams.set('grant_type', 'authorization_code')
+
+  const res = await fetch(url.toString())
+  if (!res.ok) throw new Error('微信登录服务不可用')
+
+  const payload = await res.json()
+  if (!payload?.openid) {
+    throw new Error(payload?.errmsg || '微信登录失败')
+  }
+
+  return String(payload.openid)
+}
+
+async function handleUserLogin(body: Record<string, unknown>, supabase: ReturnType<typeof getAdminClient>) {
+  const code = String(body.code || '').trim()
+  if (!code) throw new HttpError(400, '缺少登录 code')
+
+  const openid = await fetchWechatOpenId(code)
+  const { data: existing, error: existingError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('openid', openid)
+    .maybeSingle()
+
+  if (existingError) throw existingError
+
+  let user = existing
+  if (!user) {
+    const { count, error: countError } = await supabase
+      .from('users')
+      .select('openid', { count: 'exact', head: true })
+    if (countError) throw countError
+
+    const role = (count || 0) === 0 ? 'chairman' : 'unverified'
+    const { data: inserted, error: insertError } = await supabase
+      .from('users')
+      .insert({
+        openid,
+        display_name: '',
+        organizations: [],
+        role,
+        dismissed: false,
+        created_at: nowIso(),
+        updated_at: nowIso(),
+      })
+      .select('*')
+      .single()
+
+    if (insertError) throw insertError
+    user = inserted
+  }
+
+  const sessionToken = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '')
+  const tokenHash = await sha256(sessionToken)
+
+  await supabase.from('mini_sessions').delete().eq('openid', openid)
+
+  const { error: sessionError } = await supabase.from('mini_sessions').insert({
+    openid,
+    token_hash: tokenHash,
+    expires_at: new Date(Date.now() + SESSION_TTL_MS).toISOString(),
+    created_at: nowIso(),
+    updated_at: nowIso(),
+  })
+  if (sessionError) throw sessionError
+
+  return ok({
+    isNew: !user.display_name,
+    user: formatUser(user),
+    sessionToken,
+  })
+}
+
+async function handleConfigGet(supabase: ReturnType<typeof getAdminClient>) {
+  const row = await ensureConfig(supabase)
+  return ok({ data: formatConfig(row) })
+}
+
+async function handleUserSetProfile(req: Request, body: Record<string, unknown>, supabase: ReturnType<typeof getAdminClient>) {
+  const { user } = await requireUser(req, supabase)
+  const displayName = String(body.displayName || '').trim()
+  if (!displayName) throw new HttpError(400, '昵称不能为空')
+  if (displayName.length > 20) throw new HttpError(400, '昵称不能超过20个字符')
+
+  const { data, error } = await supabase
+    .from('users')
+    .update({ display_name: displayName, updated_at: nowIso() })
+    .eq('openid', user.openid)
+    .select('*')
+    .single()
+  if (error) throw error
+
+  return ok({ user: formatUser(data) })
+}
+
+async function handleOperationsList(req: Request, body: Record<string, unknown>, supabase: ReturnType<typeof getAdminClient>) {
+  const { user } = await requireUser(req, supabase)
+  assertVerified(user)
+
+  const page = Math.max(1, Number(body.page) || 1)
+  const pageSize = Math.max(1, Math.min(100, Number(body.pageSize) || 20))
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  const [{ count, error: countError }, { data, error: listError }] = await Promise.all([
+    supabase.from('operations').select('id', { count: 'exact', head: true }),
+    supabase.from('operations').select('*').order('submit_time', { ascending: false }).range(from, to),
+  ])
+
+  if (countError) throw countError
+  if (listError) throw listError
+
+  return ok({
+    data: (data || []).map(formatOperation),
+    total: count || 0,
+    page,
+    pageSize,
+  })
+}
+
+async function handleInventoryList(req: Request, body: Record<string, unknown>, supabase: ReturnType<typeof getAdminClient>) {
+  const { user } = await requireUser(req, supabase)
+  assertVerified(user)
+
+  const page = Math.max(1, Number(body.page) || 1)
+  const pageSize = Math.max(1, Math.min(100, Number(body.pageSize) || 20))
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  const [{ count, error: countError }, { data, error: listError }] = await Promise.all([
+    supabase.from('inventory').select('id', { count: 'exact', head: true }),
+    supabase.from('inventory').select('*').order('item_id', { ascending: true }).range(from, to),
+  ])
+
+  if (countError) throw countError
+  if (listError) throw listError
+
+  return ok({
+    data: (data || []).map(formatInventory),
+    total: count || 0,
+    page,
+    pageSize,
+  })
+}
+
+async function handleInventoryGet(req: Request, body: Record<string, unknown>, supabase: ReturnType<typeof getAdminClient>) {
+  const { user } = await requireUser(req, supabase)
+  assertVerified(user)
+
+  const itemId = String(body.itemId || '').trim()
+  const organization = String(body.organization || '').trim()
+  if (!itemId) throw new HttpError(400, '缺少物资编号')
+
+  let query = supabase.from('inventory').select('*').eq('item_id', itemId)
+  if (organization) query = query.eq('organization', organization)
+  const { data, error } = await query.order('updated_at', { ascending: false }).limit(1)
+  if (error) throw error
+
+  if (!data || data.length === 0) {
+    return ok({ found: false, data: null })
+  }
+
+  return ok({ found: true, data: formatInventory(data[0]) })
+}
+
+async function handleOperationCreate(req: Request, body: Record<string, unknown>, supabase: ReturnType<typeof getAdminClient>) {
+  const { user } = await requireUser(req, supabase)
+  assertVerified(user)
+  if (!String(user.display_name || '').trim()) throw new HttpError(400, '请先完善个人信息')
+
+  const payload = {
+    p_item_id: String(body.itemId || '').trim(),
+    p_item_name: String(body.itemName || '').trim(),
+    p_operation: String(body.operation || '').trim(),
+    p_organization: String(body.organization || '').trim(),
+    p_quantity: Number(body.quantity),
+    p_operation_time: String(body.operationTime || '').trim(),
+    p_operator: String(user.display_name || '').trim(),
+    p_operator_openid: String(user.openid || ''),
+  }
+
+  const { error } = await supabase.rpc('apply_operation', payload)
+  if (error) throw error
+
+  return ok({})
+}
+
+async function handleUserSetOrgs(req: Request, body: Record<string, unknown>, supabase: ReturnType<typeof getAdminClient>) {
+  const { user } = await requireUser(req, supabase)
+  assertAdmin(user)
+
+  const targetOpenid = String(body.targetOpenid || user.openid || '').trim()
+  const organizations = normalizeArray(body.organizations)
+  if (!targetOpenid) throw new HttpError(400, '缺少用户标识')
+
+  const { error } = await supabase
+    .from('users')
+    .update({ organizations, updated_at: nowIso() })
+    .eq('openid', targetOpenid)
+  if (error) throw error
+
+  return ok({})
+}
+
+async function handleUserList(req: Request, body: Record<string, unknown>, supabase: ReturnType<typeof getAdminClient>) {
+  const { user } = await requireUser(req, supabase)
+  assertVerified(user)
+
+  const roles = normalizeArray(body.roles)
+  let query = supabase.from('users').select('*').order('created_at', { ascending: false })
+  if (roles.length > 0) query = query.in('role', roles)
+  if (roles.includes('unverified')) query = query.eq('dismissed', false)
+
+  const { data, error } = await query
+  if (error) throw error
+
+  return ok({
+    data: (data || []).map(item => ({
+      ...formatUser(item),
+      dismissed: Boolean(item.dismissed),
+    })),
+  })
+}
+
+async function handleConfigUpdate(req: Request, body: Record<string, unknown>, supabase: ReturnType<typeof getAdminClient>) {
+  const { user } = await requireUser(req, supabase)
+  assertAdmin(user)
+
+  const current = formatConfig(await ensureConfig(supabase))
+  const organizations = Object.prototype.hasOwnProperty.call(body, 'organizations')
+    ? normalizeArray(body.organizations)
+    : current.organizations
+  const operators = Object.prototype.hasOwnProperty.call(body, 'operators')
+    ? normalizeArray(body.operators)
+    : current.operators
+
+  const { error } = await supabase.from('config').upsert({
+    key: 'settings',
+    organizations,
+    operators,
+    updated_at: nowIso(),
+  })
+  if (error) throw error
+
+  return ok({ data: { organizations, operators } })
+}
+
+async function handleUserSetRole(req: Request, body: Record<string, unknown>, supabase: ReturnType<typeof getAdminClient>) {
+  const { user } = await requireUser(req, supabase)
+  assertAdmin(user)
+
+  const targetOpenid = String(body.targetOpenid || '').trim()
+  const newRole = String(body.newRole || '').trim()
+  if (!targetOpenid || !newRole) throw new HttpError(400, '参数缺失')
+  if (targetOpenid === user.openid) throw new HttpError(400, '不能修改自己的角色')
+
+  const { data: target, error: targetError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('openid', targetOpenid)
+    .maybeSingle()
+  if (targetError) throw targetError
+  if (!target) throw new HttpError(404, '用户不存在')
+
+  const callerRole = String(user.role || 'unverified')
+  const targetRole = String(target.role || 'unverified')
+
+  if (targetRole === 'superadmin') throw new HttpError(400, '不能修改超管的角色')
+
+  if (newRole === 'dismissed') {
+    if (targetRole !== 'unverified') throw new HttpError(400, '只能忽略未认证用户')
+    const { error } = await supabase
+      .from('users')
+      .update({ dismissed: true, updated_at: nowIso() })
+      .eq('openid', targetOpenid)
+    if (error) throw error
+    return ok({})
+  }
+
+  if (callerRole === 'admin' || callerRole === 'superadmin') {
+    if (!(targetRole === 'unverified' && newRole === 'normal')) {
+      throw new HttpError(403, '权限不足，只能审批未认证用户')
+    }
+  }
+
+  if (callerRole === 'chairman') {
+    const allowed = (
+      (targetRole === 'unverified' && newRole === 'normal') ||
+      (targetRole === 'normal' && newRole === 'admin') ||
+      (targetRole === 'admin' && newRole === 'normal')
+    )
+    if (!allowed) throw new HttpError(400, '不支持该角色变更')
+  }
+
+  const { error } = await supabase
+    .from('users')
+    .update({ role: newRole, dismissed: false, updated_at: nowIso() })
+    .eq('openid', targetOpenid)
+  if (error) throw error
+
+  return ok({})
+}
+
+async function handleChairmanTransfer(req: Request, body: Record<string, unknown>, supabase: ReturnType<typeof getAdminClient>) {
+  const { user } = await requireUser(req, supabase)
+  if (String(user.role || '') !== 'chairman') throw new HttpError(403, '权限不足')
+
+  const targetOpenid = String(body.targetOpenid || '').trim()
+  if (!targetOpenid) throw new HttpError(400, '参数缺失')
+
+  const { data: target, error: targetError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('openid', targetOpenid)
+    .maybeSingle()
+  if (targetError) throw targetError
+  if (!target) throw new HttpError(404, '用户不存在')
+  if (String(target.role || '') !== 'admin') throw new HttpError(400, '只能转让给管理员')
+
+  const now = nowIso()
+  const { error: promoteError } = await supabase
+    .from('users')
+    .update({ role: 'chairman', updated_at: now })
+    .eq('openid', targetOpenid)
+  if (promoteError) throw promoteError
+
+  const { error: demoteError } = await supabase
+    .from('users')
+    .update({ role: 'admin', updated_at: now })
+    .eq('openid', user.openid)
+  if (demoteError) throw demoteError
+
+  return ok({})
+}
+
+Deno.serve(async req => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  if (req.method !== 'POST') {
+    return fail('Method not allowed', 405)
+  }
+
+  const route = getRoute(req)
+  const body = await readBody(req) as Record<string, unknown>
+
+  try {
+    const supabase = getAdminClient()
+
+    switch (route) {
+      case '/userLogin':
+        return await handleUserLogin(body, supabase)
+      case '/configGet':
+        return await handleConfigGet(supabase)
+      case '/userSetProfile':
+        return await handleUserSetProfile(req, body, supabase)
+      case '/operationsList':
+        return await handleOperationsList(req, body, supabase)
+      case '/inventoryList':
+        return await handleInventoryList(req, body, supabase)
+      case '/inventoryGet':
+        return await handleInventoryGet(req, body, supabase)
+      case '/operationCreate':
+        return await handleOperationCreate(req, body, supabase)
+      case '/userSetOrgs':
+        return await handleUserSetOrgs(req, body, supabase)
+      case '/userList':
+        return await handleUserList(req, body, supabase)
+      case '/configUpdate':
+        return await handleConfigUpdate(req, body, supabase)
+      case '/userSetRole':
+        return await handleUserSetRole(req, body, supabase)
+      case '/chairmanTransfer':
+        return await handleChairmanTransfer(req, body, supabase)
+      case '/dataExport':
+      case '/dataImport':
+      case '/inventoryRebuild':
+        return fail('该功能将在第二阶段迁移到 Supabase', 501)
+      default:
+        return fail('接口不存在', 404)
+    }
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return fail(error.message, error.status)
+    }
+
+    const message = error instanceof Error ? error.message : '服务器错误'
+    return fail(message, 500)
+  }
+})

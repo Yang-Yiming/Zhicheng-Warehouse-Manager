@@ -194,3 +194,16 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 - [x] Reduce user-facing operation types from 4 to 2 (入库 / 出库)
 - [x] Frontend auto-routes: 入库 → checks inventory existence → sends 入库 or 物资增添; 出库 → sends 部分出库
 - [x] Backend unchanged; all 4 real operation types still stored in records
+
+## v1.2.0
+
+## Phase 7.0: Supabase Core Migration ✓
+
+- [x] Remove miniprogram runtime dependency on `wx.cloud` / Cloud DB / cloud functions
+- [x] Keep WeChat identity via `wx.login` + backend `code2session`, without using 微信云开发平台
+- [x] Add local config sync for `SUPABASE_FUNCTIONS_BASE_URL` alongside existing `APPID` sync
+- [x] Add Supabase SQL migration for `users` / `operations` / `inventory` / `config` / `mini_sessions`
+- [x] Add single Supabase Edge Function router `api` covering core endpoints: `userLogin`, `userSetProfile`, `configGet`, `operationsList`, `inventoryList`, `inventoryGet`, `operationCreate`, `userSetOrgs`, `userList`, `configUpdate`, `userSetRole`, `chairmanTransfer`
+- [x] Preserve existing role model and settings/member-management flow on Supabase
+- [x] Bootstrap first-ever logged-in user as `chairman` so a fresh project can self-initialize without manual DB edits
+- [x] Hide Excel import/export UI during Supabase phase 1; `dataExport` / `dataImport` deferred to phase 2

@@ -5,12 +5,12 @@ WeChat miniprogram architecture for the Warehouse Manager.
 ## Tech Stack
 
 - **Frontend**: WeChat miniprogram (WXML + WXSS + JS)
-- **Backend**: WeChat cloud development (云开发)
-- **Database**: Cloud DB (NoSQL, document-based)
-- **Cloud functions**: Node.js serverless functions
+- **Backend**: Supabase Edge Functions (Deno)
+- **Database**: Supabase Postgres
+- **Authentication**: WeChat `wx.login` + backend `code2session` + custom Supabase session table
 - **CI/Tooling**: miniprogram-ci (preferred over WeChat DevTools GUI for upload/preview/build)
 
-Configuration note: WeChat DevTools reads `project.config.json` directly and does not consume `.env` files. Repository tracks `project.config.template.json` (placeholder appid) while local `project.config.json` is gitignored. Local AppID is managed via `.env.local`, then synced into `project.config.json` by running `npm run config:sync`.
+Configuration note: WeChat DevTools reads `project.config.json` directly and does not consume `.env` files. Repository tracks `project.config.template.json` (placeholder appid) while local `project.config.json` is gitignored. Local AppID and Supabase function base URL are managed via `.env.local`, then synced by running `npm run config:sync`. The script also generates local `miniprogram/utils/runtime-config.js` from `miniprogram/utils/runtime-config.template.js`.
 
 ## Project Structure
 
@@ -26,30 +26,22 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 │   │   ├── profile-setup/                 # First-launch display name setup
 │   │   └── user-orgs-edit/                # Admin edits a specific user's organizations
 │   └── utils/
-│       ├── db.js                          # Cloud DB collection refs + query helpers
+│       ├── db.js                          # API-backed query helpers
 │       ├── validation.js                  # Input validation (required, positiveInt, datetimeFormat, validateOperation)
-│       ├── cloud.js                       # Unified cloud function caller (callCloud)
+│       ├── cloud.js                       # Unified Supabase Edge Function caller (still exported as callCloud for compatibility)
 │       ├── search.js                      # Shared full-text filtering helper (filterByQuery)
 │       ├── feedback.js                    # Shared user feedback helper (showError, showSuccess)
+│       ├── runtime-config.template.js     # Placeholder local runtime config template
 │       └── excel.js                       # SheetJS wrapper: format detection, parse, export, file I/O
-├── cloudfunctions/
-│   ├── operationCreate/                   # Validate + write operation, update inventory
-│   ├── operationsList/                    # Paginated operations list sorted by submitTime desc
-│   ├── inventoryList/                     # Full paginated inventory sorted by itemId
-│   ├── inventoryGet/                      # Single inventory lookup by itemId (+ optional organization)
-│   ├── inventoryRebuild/                  # Rebuild inventory by replaying all operations
-│   ├── configGet/                         # Return config doc; seed defaults on first run
-│   ├── configUpdate/                      # Update organizations/operators list
-│   ├── userLogin/                         # Lookup-or-create user by openid on app launch; returns role
-│   ├── userSetProfile/                    # Save display name (max 20 chars) for logged-in user
-│   ├── userSetOrgs/                       # Update user's organizations (self: admin+ only; proxy: admin+ sets targetOpenid)
-│   ├── userList/                          # List users by role (admin+ only); excludes dismissed unverified
-│   ├── userSetRole/                       # Change user role with permission matrix enforcement
-│   ├── chairmanTransfer/                  # Transfer chairman role to an admin
-│   ├── dataExport/                        # Export all operations + inventory (verified users)
-│   └── dataImport/                        # Import data with full overwrite (chairman only)
+├── supabase/
+│   ├── config.toml                        # Supabase local config; `api` function disables JWT verification
+│   ├── migrations/
+│   │   └── 20260408_supabase_core.sql     # Core schema + `apply_operation` SQL function
+│   └── functions/
+│       └── api/
+│           └── index.ts                   # Single router for all core backend endpoints
 ├── scripts/
-│   └── sync-local-config.js              # Sync APPID from .env.local into project.config.json
+│   └── sync-local-config.js               # Sync APPID + Supabase function base URL from .env.local
 └── DOCS/
 ```
 
@@ -58,7 +50,6 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 ### `users`
 ```json
 {
-  "_id": "auto",
   "openid": "oXXXX...",
   "displayName": "张三",
   "organizations": ["学生会", "团委"],
@@ -76,7 +67,6 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 ### `operations`
 ```json
 {
-  "_id": "auto",
   "submitTime": "2024-01-15T10:30:00Z",
   "itemId": "A1-3-05",
   "itemName": "折叠桌",
@@ -102,7 +92,6 @@ Business rules enforced by `operationCreate`:
 ### `inventory`
 ```json
 {
-  "_id": "auto",
   "itemId": "A1-3-05",
   "itemName": "折叠桌",
   "organization": "学生会",
@@ -117,7 +106,7 @@ Business rules enforced by `operationCreate`:
 ### `config`
 ```json
 {
-  "_id": "settings",
+  "key": "settings",
   "organizations": ["学生会", "团委", ...],
   "operators": ["张三", "李四", ...]
 }
@@ -133,9 +122,14 @@ Implementation note: cloud functions write config fields (`organizations`, `oper
 
 ### Login Flow (app launch)
 ```
-onLaunch → wx.login() → callCloud('userLogin')
+onLaunch → wx.login() → POST /functions/v1/api/userLogin
+  → Edge Function calls WeChat code2session → resolves openid
+  → lookup-or-create users row
+  → create mini_sessions token (30d sliding expiry)
+  → if first-ever user → bootstrap role=chairman
+  → frontend stores session token
   → if isNew || !displayName → wx.navigateTo profile-setup page
-    → user enters displayName → callCloud('userSetProfile')
+    → user enters displayName → POST /functions/v1/api/userSetProfile
     → profile-setup calls app._setLoginReady(user)
   → else → app._setLoginReady(user)
   → _setLoginReady fires queued onLoginReady callbacks
@@ -145,12 +139,9 @@ Pages call `app.onLoginReady(cb)` to receive the current user. If login is alrea
 
 ### Creating an Operation
 ```
-User fills form → validate on client → call cloud function operationCreate
-  → ensure `users`/`operations`/`inventory` collections exist (first-run bootstrap)
-  → cloud.getWXContext() → OPENID
-  → lookup users collection → resolve displayName
-  → write to `operations` collection (operator/submitter = displayName, operatorOpenid = OPENID)
-  → update `inventory` collection (add/remove/modify)
+User fills form → validate on client → POST /functions/v1/api/operationCreate
+  → backend validates session token → resolves current user from `mini_sessions`
+  → SQL function `apply_operation(...)` writes operation + updates inventory in one DB transaction
   → return success/failure
 ```
 
@@ -164,54 +155,24 @@ User fills form → validate on client → call cloud function operationCreate
   - `出库`: item name input is readonly
   - `入库`: item name is editable until itemId lookup hits existing inventory; after hit it becomes readonly
 
-### Inventory Rebuild
-```
-Admin triggers rebuild → cloud function inventoryRebuild
-  → ensure 'operations' and 'inventory' collections exist
-  → paginated read of all operations sorted by operationTime asc
-  → replay operations into state map keyed by `${itemId}::${organization}`
-  → filter out entries with quantity ≤ 0
-  → delete all existing inventory docs, write new entries
-```
-
-`inventoryList` uses paginated reads (page size 100) to return the full inventory sorted by `itemId`, bypassing the Cloud DB default 20-record fetch limit.
+`inventoryList` now paginates via Postgres `range()` and sorts by `item_id`.
 
 ### Data Export/Import
 
-```
-Export (verified users):
-  Settings → callCloud('dataExport')
-  → cloud function paginates all operations + inventory, strips _id
-  → frontend builds xlsx with SheetJS (two sheets: 操作记录 + 库存状态)
-  → writeAndShare → wx.shareFileMessage or wx.openDocument
-
-Import (chairman only):
-  Settings → wx.chooseMessageFile → readXlsxFile → detectFormat
-  → format detection:
-    - 'miniprogram' (two sheets 操作记录+库存状态) → full restore
-    - 'old_inventory' (single sheet with 最后操作 header) → inventory import
-    - 'old_operations' → reject with message
-    - 'unknown' → reject with message
-  → wx.showModal confirm → callCloud('dataImport', { mode, operations?, inventory? })
-  → cloud function deletes all operations + inventory, then batch-inserts imported data
-```
-
-`dataImport` mode `old_inventory` creates both inventory records and corresponding operation records (operation=覆盖导入) for audit trail.
-
-Cloud functions handling collection bootstrap (`operationsList`, `inventoryList`, `operationCreate`, `inventoryRebuild`) treat CloudBase missing-collection errors via both error code (`-502005`) and message variants (`collection not exists`, `Db or Table not exist`, `does not exist`) because different runtimes return different wording.
+Excel import/export is intentionally deferred in the Supabase migration. The settings UI hides these entries in v1.2.0-supabase-core, and the backend currently returns `501` for `dataExport` / `dataImport`.
 
 ### `db.js` helper notes
 
-- `getOperations(page, pageSize)` — direct Cloud DB query, paginated, sorted by `submitTime` desc
-- `getInventory()` — delegates to `inventoryList` cloud function (not direct DB) to bypass miniprogram permission limits on full collection reads
-- `getConfig()` — direct Cloud DB read of `config.doc('settings')`
+- `getOperations(page, pageSize)` — Edge Function call, paginated, sorted by `submitTime` desc
+- `getInventory(page, pageSize)` — Edge Function call, paginated, sorted by `itemId`
+- `getConfig()` — Edge Function call to `configGet`
 
 ## Key Design Decisions
 
-1. **Cloud DB over local storage** — multi-user access, data persistence, no sync issues. Replaces the old questionnaire → xlsx → desktop app workflow entirely.
-2. **Inventory as derived data** — inventory can always be rebuilt from operations, ensuring consistency
-3. **Cloud functions for heavy logic** — inventory rebuild runs server-side to avoid miniprogram performance limits
-4. **Single config document** — organizations and operators stored in one doc for simplicity; all users read the same config
-5. **Shared frontend utilities** — cloud function invocation and search filtering are centralized in `utils/cloud.js` and `utils/search.js` to reduce duplicated page logic
-6. **Consistent feedback UX** — common toast/modal behavior is centralized in `utils/feedback.js` to avoid repetitive per-page error handling code
-7. **Pre-built mini bundle over npm** — SheetJS is included as a pre-built `libs/xlsx.mini.min.js` (245KB) instead of a full npm install (~7MB with codepage dependencies). `miniprogram_npm/` is gitignored and excluded via `packOptions` to prevent accidental size bloat
+1. **WeChat identity without cloud development** — `wx.login` is kept, but `openid` is resolved by a Supabase Edge Function calling WeChat `code2session`, so the app no longer depends on 微信云开发平台.
+2. **Custom app session over Supabase Auth** — the app uses a dedicated `mini_sessions` table keyed by hashed bearer tokens. This avoids forcing Supabase Auth into a WeChat-mini-program-specific identity model.
+3. **Inventory mutation in SQL transaction** — `apply_operation(...)` keeps operation history writes and inventory updates atomic.
+4. **Single Edge Function router** — frontend API names stay stable while backend deployment surface is simplified to one Supabase function.
+5. **First-user bootstrap** — the first-ever login in a fresh database is promoted to `chairman`, eliminating manual SQL setup for initial admin access.
+6. **Shared frontend utilities** — request handling and search filtering remain centralized in `utils/cloud.js` and `utils/search.js`.
+7. **Excel remains phase 2** — core inventory/user flows migrate first; import/export comes back after the Supabase core path is stable.
