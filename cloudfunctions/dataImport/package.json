@@ -1,0 +1,9 @@
+{
+  "name": "dataImport",
+  "version": "1.0.0",
+  "description": "Import data by overwriting all operations and inventory",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

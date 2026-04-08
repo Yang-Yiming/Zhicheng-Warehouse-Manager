@@ -207,3 +207,8 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 - [x] Preserve existing role model and settings/member-management flow on Supabase
 - [x] Bootstrap first-ever logged-in user as `chairman` so a fresh project can self-initialize without manual DB edits
 - [x] Hide Excel import/export UI during Supabase phase 1; `dataExport` / `dataImport` deferred to phase 2
+
+## Phase 7.1: Supabase Login Diagnostics ✓
+
+- [x] Surface backend login error text in `miniprogram/app.js` retry modal instead of always showing a generic network failure
+- [x] Document `userLogin` troubleshooting for missing Supabase secrets, mismatched WeChat app credentials, and missing SQL migration

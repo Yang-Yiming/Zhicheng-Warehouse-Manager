@@ -7,3 +7,5 @@ old_python/
 project.private.config.json
 miniprogram/miniprogram_npm/
 miniprogram/utils/runtime-config.js
+supabase/.temp
+.DS_Store

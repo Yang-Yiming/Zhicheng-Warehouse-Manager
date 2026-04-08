@@ -16,7 +16,7 @@ App({
     wx.login({
       success: (res) => {
         if (!res.code) {
-          this._showRetry()
+          this._showRetry('微信登录未返回有效 code')
           return
         }
         callCloud('userLogin', { code: res.code }, { skipAuth: true })
@@ -31,19 +31,23 @@ App({
               this._setLoginReady(user)
             }
           })
-          .catch(() => {
+          .catch((error) => {
             clearSessionToken()
-            this._showRetry()
+            this._showRetry(error && error.message)
           })
       },
-      fail: () => this._showRetry(),
+      fail: (error) => this._showRetry(error && error.errMsg),
     })
   },
 
-  _showRetry() {
+  _showRetry(message) {
+    const detail = String(message || '').trim()
+    const content = detail
+      ? `登录接口返回错误：${detail}`
+      : '无法连接到服务器，请重试'
     wx.showModal({
       title: '登录失败',
-      content: '无法连接到服务器，请重试',
+      content,
       showCancel: false,
       confirmText: '重试',
       success: () => this._doLogin(),

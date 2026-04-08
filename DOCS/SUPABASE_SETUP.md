@@ -91,3 +91,22 @@ Not yet migrated:
 - Excel export
 - Excel import
 - Inventory rebuild
+
+## 8. Login troubleshooting
+
+If `POST /functions/v1/api/userLogin` returns `500`, check the response body first.
+
+Common cases:
+
+- `Missing env: WECHAT_APPID` / `Missing env: WECHAT_APP_SECRET`
+  - The Edge Function secrets were not set in Supabase.
+- `invalid appsecret`
+  - `WECHAT_APP_SECRET` in Supabase does not match the mini program `APPID`.
+  - Make sure `APPID` in local `.env.local` and `WECHAT_APPID` in Supabase secrets refer to the same mini program.
+  - Regenerate or copy the correct secret from the WeChat mini program admin console, then redeploy the `api` function if needed.
+- `relation "users" does not exist` or missing RPC errors
+  - The SQL migration `supabase/migrations/20260408_supabase_core.sql` was not applied to the target project.
+
+Frontend note:
+
+- `miniprogram/app.js` now surfaces the backend login error message in the retry modal, so deployment/config mistakes are visible in the mini program instead of being collapsed into a generic network error.
