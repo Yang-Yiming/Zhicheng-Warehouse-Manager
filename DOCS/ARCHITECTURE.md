@@ -21,7 +21,7 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 │   │   ├── operations/                    # Operations log list (paginated, searchable) + FAB → blank new form; reloads on onShow
 │   │   ├── inventory/                     # Current inventory list; tap item → action sheet → pre-filled locked form; FAB → pre-filled 入库 form; reloads on onShow
 │   │   ├── operation-form/                # New/pre-filled operation form (URL params: itemId, itemName, organization, operation, locked); locked=1 renders itemId/organization as readonly; segmented control for 入库/出库; itemId blur auto-lookup fills itemName; 出库 requires item existence and enables Max=current stock
-│   │   ├── settings/                      # Role-aware settings: display name + role badge; org management (admin+); user approval/management (admin+); admin promote/demote + chairman transfer (chairman only)
+│   │   ├── settings/                      # Role-aware settings: display name + role badge; org management (admin+); user approval/management (admin+); admin promote/demote + chairman transfer (chairman only); Excel export (verified) + xlsx import (chairman)
 │   │   ├── other/                         # Contact page shown from settings "联系" entry; static contact information with one-tap copy buttons (GitHub/email)
 │   │   ├── profile-setup/                 # First-launch display name setup
 │   │   └── user-orgs-edit/                # Admin edits a specific user's organizations
@@ -159,7 +159,18 @@ User fills form → validate on client → POST /functions/v1/api/operationCreat
 
 ### Data Export/Import
 
-Excel import/export is intentionally deferred in the Supabase migration. The settings UI hides these entries in v1.2.0-supabase-core, and the backend currently returns `501` for `dataExport` / `dataImport`.
+Excel import/export now runs on the Supabase path:
+
+- `dataExport` requires any verified user and returns the full `operations` + `inventory` payload.
+- `dataExport` paginates backend reads explicitly, so export size is not truncated by Supabase's default row cap.
+- The miniprogram converts that payload into a two-sheet xlsx workbook (`操作记录`, `库存状态`) via `utils/excel.js`.
+- The `操作记录` sheet includes `operatorOpenid` alongside the visible operator fields so a full export/import round-trip preserves operation audit identity.
+- `dataImport` is restricted to `chairman` and overwrites current `operations` + `inventory`.
+- Supported import formats:
+  - current miniprogram export format (`操作记录` + `库存状态`)
+  - old Python single-sheet inventory export (`old_inventory`)
+- Import replacement is executed by SQL function `replace_imported_data(...)` so table clearing + reinsertion happens in one database transaction.
+- For `old_inventory` import, the system synthesizes matching `入库` operation records because the old file contains inventory snapshot only, not full operation history.
 
 ### `db.js` helper notes
 
@@ -175,4 +186,4 @@ Excel import/export is intentionally deferred in the Supabase migration. The set
 4. **Single Edge Function router** — frontend API names stay stable while backend deployment surface is simplified to one Supabase function.
 5. **First-user bootstrap** — the first-ever login in a fresh database is promoted to `chairman`, eliminating manual SQL setup for initial admin access.
 6. **Shared frontend utilities** — request handling and search filtering remain centralized in `utils/cloud.js` and `utils/search.js`.
-7. **Excel remains phase 2** — core inventory/user flows migrate first; import/export comes back after the Supabase core path is stable.
+7. **Excel generation stays on-device** — Supabase stores and serves normalized business data; the miniprogram still handles xlsx parsing and workbook generation locally via SheetJS.

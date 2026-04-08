@@ -21,6 +21,7 @@ const DEFAULT_ORGANIZATIONS = [
 const ADMIN_ROLES = ['admin', 'superadmin', 'chairman']
 const VERIFIED_ROLES = ['normal', 'admin', 'superadmin', 'chairman']
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
+const EXPORT_PAGE_SIZE = 1000
 
 class HttpError extends Error {
   status: number
@@ -85,6 +86,77 @@ function normalizeArray(values: unknown) {
   return [...new Set(values.map(v => String(v || '').trim()).filter(Boolean))]
 }
 
+function toPositiveInteger(value: unknown) {
+  const num = Number(value)
+  if (!Number.isInteger(num) || num <= 0) return 0
+  return num
+}
+
+function normalizeOperationImport(record: unknown) {
+  const item = (record && typeof record === 'object') ? record as Record<string, unknown> : {}
+  return {
+    submitTime: String(item.submitTime || '').trim(),
+    itemId: String(item.itemId || '').trim(),
+    itemName: String(item.itemName || '').trim(),
+    operation: String(item.operation || '').trim(),
+    organization: String(item.organization || '').trim(),
+    quantity: toPositiveInteger(item.quantity),
+    operationTime: String(item.operationTime || '').trim(),
+    operator: String(item.operator || '').trim(),
+    submitter: String(item.submitter || '').trim(),
+    operatorOpenid: String(item.operatorOpenid || '').trim(),
+  }
+}
+
+function normalizeInventoryImport(record: unknown) {
+  const item = (record && typeof record === 'object') ? record as Record<string, unknown> : {}
+  return {
+    itemId: String(item.itemId || '').trim(),
+    itemName: String(item.itemName || '').trim(),
+    organization: String(item.organization || '').trim(),
+    quantity: toPositiveInteger(item.quantity),
+    lastOperation: String(item.lastOperation || '').trim(),
+    lastOperator: String(item.lastOperator || '').trim(),
+    lastOperationTime: String(item.lastOperationTime || '').trim(),
+    notes: String(item.notes || '').trim(),
+  }
+}
+
+function validateImportedOperations(records: ReturnType<typeof normalizeOperationImport>[]) {
+  const allowedOperations = ['入库', '出库', '物资增添', '部分出库']
+  records.forEach((item, index) => {
+    if (!item.itemId || !item.itemName || !item.organization || !item.operationTime) {
+      throw new HttpError(400, `导入失败：操作记录第 ${index + 1} 行存在空字段`)
+    }
+    if (!allowedOperations.includes(item.operation)) {
+      throw new HttpError(400, `导入失败：操作记录第 ${index + 1} 行操作类型无效`)
+    }
+    if (!item.quantity) {
+      throw new HttpError(400, `导入失败：操作记录第 ${index + 1} 行数量无效`)
+    }
+  })
+}
+
+function validateImportedInventory(records: ReturnType<typeof normalizeInventoryImport>[], mode: string) {
+  records.forEach((item, index) => {
+    if (!item.itemId || !item.itemName || !item.organization) {
+      throw new HttpError(400, `导入失败：库存记录第 ${index + 1} 行存在空字段`)
+    }
+    if (!item.quantity) {
+      throw new HttpError(400, `导入失败：库存记录第 ${index + 1} 行数量无效`)
+    }
+    if (mode === 'full' && !item.lastOperationTime) {
+      throw new HttpError(400, `导入失败：库存记录第 ${index + 1} 行缺少最后操作时间`)
+    }
+    if (mode === 'full' && !item.lastOperation) {
+      throw new HttpError(400, `导入失败：库存记录第 ${index + 1} 行缺少最后操作`)
+    }
+    if (mode === 'full' && !item.lastOperator) {
+      throw new HttpError(400, `导入失败：库存记录第 ${index + 1} 行缺少最后操作人`)
+    }
+  })
+}
+
 function formatUser(user: Record<string, unknown> | null) {
   if (!user) return null
   return {
@@ -131,6 +203,34 @@ function formatConfig(row: Record<string, unknown> | null) {
     organizations: normalizeArray(data.organizations || DEFAULT_ORGANIZATIONS),
     operators: normalizeArray(data.operators),
   }
+}
+
+async function selectAllRows(
+  supabase: ReturnType<typeof getAdminClient>,
+  table: 'operations' | 'inventory',
+  orderColumn: 'submit_time' | 'item_id',
+  ascending: boolean,
+) {
+  const rows: Record<string, unknown>[] = []
+  let from = 0
+
+  while (true) {
+    const to = from + EXPORT_PAGE_SIZE - 1
+    const { data, error } = await supabase
+      .from(table)
+      .select('*')
+      .order(orderColumn, { ascending })
+      .range(from, to)
+
+    if (error) throw error
+
+    const batch = Array.isArray(data) ? data : []
+    rows.push(...batch)
+    if (batch.length < EXPORT_PAGE_SIZE) break
+    from += EXPORT_PAGE_SIZE
+  }
+
+  return rows
 }
 
 async function sha256(input: string) {
@@ -392,6 +492,59 @@ async function handleOperationCreate(req: Request, body: Record<string, unknown>
   return ok({})
 }
 
+async function handleDataExport(req: Request, supabase: ReturnType<typeof getAdminClient>) {
+  const { user } = await requireUser(req, supabase)
+  assertVerified(user)
+
+  const [operations, inventory] = await Promise.all([
+    selectAllRows(supabase, 'operations', 'submit_time', false),
+    selectAllRows(supabase, 'inventory', 'item_id', true),
+  ])
+
+  return ok({
+    operations: operations.map(formatOperation),
+    inventory: inventory.map(formatInventory),
+  })
+}
+
+async function handleDataImport(req: Request, body: Record<string, unknown>, supabase: ReturnType<typeof getAdminClient>) {
+  const { user } = await requireUser(req, supabase)
+  if (String(user.role || '') !== 'chairman') throw new HttpError(403, '仅大提督可执行导入操作')
+  if (!String(user.display_name || '').trim()) throw new HttpError(400, '请先完善个人信息')
+
+  const mode = String(body.mode || '').trim()
+  if (!['full', 'old_inventory'].includes(mode)) {
+    throw new HttpError(400, `未知的导入模式: ${mode || '(空)'}`)
+  }
+
+  const operations = Array.isArray(body.operations) ? body.operations.map(normalizeOperationImport) : []
+  const inventory = Array.isArray(body.inventory) ? body.inventory.map(normalizeInventoryImport) : []
+
+  if (mode === 'full' && operations.length === 0 && inventory.length === 0) {
+    throw new HttpError(400, '导入数据为空')
+  }
+  if (mode === 'old_inventory' && inventory.length === 0) {
+    throw new HttpError(400, '导入数据为空')
+  }
+
+  if (mode === 'full') validateImportedOperations(operations)
+  validateImportedInventory(inventory, mode)
+
+  const { data, error } = await supabase.rpc('replace_imported_data', {
+    p_mode: mode,
+    p_operations: operations,
+    p_inventory: inventory,
+    p_actor_openid: String(user.openid || ''),
+    p_actor_name: String(user.display_name || '').trim(),
+  })
+  if (error) throw error
+
+  return ok({
+    importedOperations: Number(data?.importedOperations || 0),
+    importedInventory: Number(data?.importedInventory || 0),
+  })
+}
+
 async function handleUserSetOrgs(req: Request, body: Record<string, unknown>, supabase: ReturnType<typeof getAdminClient>) {
   const { user } = await requireUser(req, supabase)
   assertAdmin(user)
@@ -581,7 +734,9 @@ Deno.serve(async req => {
       case '/chairmanTransfer':
         return await handleChairmanTransfer(req, body, supabase)
       case '/dataExport':
+        return await handleDataExport(req, supabase)
       case '/dataImport':
+        return await handleDataImport(req, body, supabase)
       case '/inventoryRebuild':
         return fail('该功能将在第二阶段迁移到 Supabase', 501)
       default:

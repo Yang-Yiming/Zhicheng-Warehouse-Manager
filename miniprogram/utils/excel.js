@@ -11,6 +11,7 @@ const OPS_COLUMNS = [
   { header: '操作时间', key: 'operationTime' },
   { header: '操作人',   key: 'operator' },
   { header: '提交者',   key: 'submitter' },
+  { header: '操作人OpenID', key: 'operatorOpenid' },
 ]
 
 const INV_COLUMNS = [

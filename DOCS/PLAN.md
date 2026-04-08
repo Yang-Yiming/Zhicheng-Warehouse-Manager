@@ -212,3 +212,14 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 
 - [x] Surface backend login error text in `miniprogram/app.js` retry modal instead of always showing a generic network failure
 - [x] Document `userLogin` troubleshooting for missing Supabase secrets, mismatched WeChat app credentials, and missing SQL migration
+
+## Phase 7.2: Supabase Excel Import / Export ✓
+
+- [x] Restore settings-page Excel export entry for verified users on the Supabase runtime
+- [x] Restore settings-page xlsx import entry for chairman only, with overwrite confirmation
+- [x] Add Supabase `dataExport` endpoint returning full operations + inventory payload for frontend workbook generation
+- [x] Add Supabase `dataImport` endpoint covering current miniprogram export format and old single-sheet inventory format
+- [x] Add transactional SQL import helper to replace `operations` / `inventory` data in one database function call
+- [x] Keep xlsx parsing/building on the miniprogram side via existing `utils/excel.js`
+- [x] Paginate `dataExport` reads so large warehouses are exported completely beyond Supabase's default row cap
+- [x] Include `operatorOpenid` in the exported workbook so full export/import round-trips preserve operation audit identity

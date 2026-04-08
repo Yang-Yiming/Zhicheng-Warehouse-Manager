@@ -1,6 +1,14 @@
 const app = getApp()
 const { callCloud } = require('../../utils/cloud')
 const { showError, showSuccess } = require('../../utils/feedback')
+const {
+  detectFormat,
+  parseMiniprogramFormat,
+  parseOldInventory,
+  buildExportWorkbook,
+  readXlsxFile,
+  writeAndShare,
+} = require('../../utils/excel')
 
 const ROLE_LABELS = {
   unverified: '未认证',
@@ -228,6 +236,118 @@ Page({
 
   onToggleMembers() {
     this.setData({ membersExpanded: !this.data.membersExpanded })
+  },
+
+  onExportData() {
+    wx.showLoading({ title: '导出中', mask: true })
+    callCloud('dataExport')
+      .then(result => {
+        const operations = Array.isArray(result.operations) ? result.operations : []
+        const inventory = Array.isArray(result.inventory) ? result.inventory : []
+        const workbook = buildExportWorkbook(operations, inventory)
+        const filename = this._buildExportFilename()
+        return writeAndShare(workbook, filename)
+      })
+      .then(() => showSuccess('导出成功'))
+      .catch(err => showError(err.message || '导出失败', { modal: true }))
+      .finally(() => wx.hideLoading())
+  },
+
+  onImportData() {
+    wx.chooseMessageFile({
+      count: 1,
+      type: 'file',
+      extension: ['xlsx'],
+      success: async (res) => {
+        try {
+          const file = (res.tempFiles && res.tempFiles[0]) || {}
+          const filePath = file.path || file.tempFilePath || ''
+          if (!filePath) throw new Error('未找到所选文件')
+
+          wx.showLoading({ title: '解析中', mask: true })
+          const workbook = await readXlsxFile(filePath)
+          const payload = this._buildImportPayload(workbook)
+          wx.hideLoading()
+          this._confirmImport(payload)
+        } catch (err) {
+          wx.hideLoading()
+          showError((err && err.message) || '文件解析失败', { modal: true })
+        }
+      },
+      fail: (err) => {
+        if (err && err.errMsg && err.errMsg.includes('cancel')) return
+        showError('选择文件失败')
+      },
+    })
+  },
+
+  _buildExportFilename() {
+    const now = new Date()
+    const parts = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0'),
+      '-',
+      String(now.getHours()).padStart(2, '0'),
+      String(now.getMinutes()).padStart(2, '0'),
+      String(now.getSeconds()).padStart(2, '0'),
+    ]
+    return `warehouse-export-${parts.join('')}.xlsx`
+  },
+
+  _buildImportPayload(workbook) {
+    const format = detectFormat(workbook)
+    if (format === 'miniprogram') {
+      const parsed = parseMiniprogramFormat(workbook)
+      return {
+        mode: 'full',
+        operations: parsed.operations,
+        inventory: parsed.inventory,
+        summary: `将覆盖导入 ${parsed.operations.length} 条操作记录和 ${parsed.inventory.length} 条库存记录。`,
+      }
+    }
+
+    if (format === 'old_inventory') {
+      const parsed = parseOldInventory(workbook)
+      return {
+        mode: 'old_inventory',
+        operations: [],
+        inventory: parsed.inventory,
+        summary: `将把旧库存表中的 ${parsed.inventory.length} 条库存记录转换为当前系统数据，并清空现有数据。`,
+      }
+    }
+
+    if (format === 'old_operations') {
+      throw new Error('暂不支持直接导入旧问卷操作表，请先导出为当前小程序格式')
+    }
+
+    throw new Error('无法识别文件格式，请使用系统导出的 xlsx 或旧库存表')
+  },
+
+  _confirmImport(payload) {
+    wx.showModal({
+      title: '确认导入',
+      content: `${payload.summary}\n\n导入会覆盖当前全部操作记录和库存，且不可撤销。`,
+      confirmText: '确认导入',
+      success: (res) => {
+        if (!res.confirm) return
+        this._runImport(payload)
+      },
+    })
+  },
+
+  _runImport(payload) {
+    wx.showLoading({ title: '导入中', mask: true })
+    callCloud('dataImport', {
+      mode: payload.mode,
+      operations: payload.operations,
+      inventory: payload.inventory,
+    })
+      .then(result => {
+        showSuccess(`已导入 ${result.importedOperations || 0} 条操作，${result.importedInventory || 0} 条库存`)
+      })
+      .catch(err => showError(err.message || '导入失败', { modal: true }))
+      .finally(() => wx.hideLoading())
   },
 
   onOpenOther() {
