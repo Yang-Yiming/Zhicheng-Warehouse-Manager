@@ -172,6 +172,7 @@ Excel import/export now runs on the Supabase path:
   - old Python single-sheet inventory export (`old_inventory`)
 - Import replacement is executed by SQL function `replace_imported_data(...)` so table clearing + reinsertion happens in one database transaction.
 - The SQL import helper clears `operations` / `inventory` using safe-update-compatible statements (`DELETE ... WHERE TRUE`) because some Supabase environments reject unconditional `DELETE`.
+- The SQL import helper avoids PL/pgSQL variables named `current_time`, because PostgreSQL can resolve that keyword as `time with time zone` instead of the intended `timestamptz` value during inserts.
 - Import validation happens in the Edge Function first; unexpected Supabase/Postgres failures are returned with their backend message instead of a generic `服务器错误`.
 - For `old_inventory` import, the system synthesizes matching `入库` operation records because the old file contains inventory snapshot only, not full operation history.
 

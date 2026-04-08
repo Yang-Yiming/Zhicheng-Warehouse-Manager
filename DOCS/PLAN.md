@@ -230,3 +230,4 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 - [x] Validate imported time fields before SQL import so malformed rows fail with row-level messages instead of generic server errors
 - [x] Preserve backend error details from Supabase/Postgres in the API response when import fails unexpectedly
 - [x] Make import overwrite SQL compatible with safe-update environments that reject unconditional `DELETE`
+- [x] Avoid PostgreSQL `CURRENT_TIME` keyword collision in import SQL by renaming internal timestamp variables
