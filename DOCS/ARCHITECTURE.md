@@ -166,10 +166,13 @@ Excel import/export now runs on the Supabase path:
 - The miniprogram converts that payload into a two-sheet xlsx workbook (`操作记录`, `库存状态`) via `utils/excel.js`.
 - The `操作记录` sheet includes `operatorOpenid` alongside the visible operator fields so a full export/import round-trip preserves operation audit identity.
 - `dataImport` is restricted to `chairman` and overwrites current `operations` + `inventory`.
+- `dataImport` normalizes spreadsheet time cells before validation/import, including Excel serial dates and common date-string variants written back by Excel/WPS.
 - Supported import formats:
   - current miniprogram export format (`操作记录` + `库存状态`)
   - old Python single-sheet inventory export (`old_inventory`)
 - Import replacement is executed by SQL function `replace_imported_data(...)` so table clearing + reinsertion happens in one database transaction.
+- The SQL import helper clears `operations` / `inventory` using safe-update-compatible statements (`DELETE ... WHERE TRUE`) because some Supabase environments reject unconditional `DELETE`.
+- Import validation happens in the Edge Function first; unexpected Supabase/Postgres failures are returned with their backend message instead of a generic `服务器错误`.
 - For `old_inventory` import, the system synthesizes matching `入库` operation records because the old file contains inventory snapshot only, not full operation history.
 
 ### `db.js` helper notes

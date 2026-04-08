@@ -92,16 +92,109 @@ function toPositiveInteger(value: unknown) {
   return num
 }
 
+function formatShanghaiDateTime(date: Date) {
+  const formatter = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+
+  const parts = formatter.formatToParts(date).reduce<Record<string, string>>((acc, part) => {
+    if (part.type !== 'literal') acc[part.type] = part.value
+    return acc
+  }, {})
+
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`
+}
+
+function excelSerialToDate(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return null
+  const epoch = Date.UTC(1899, 11, 30)
+  const millis = Math.round(value * 24 * 60 * 60 * 1000)
+  return new Date(epoch + millis)
+}
+
+function parseImportDate(value: unknown) {
+  if (value === null || value === undefined) return null
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value
+
+  if (typeof value === 'number') {
+    return excelSerialToDate(value)
+  }
+
+  const text = String(value).trim()
+  if (!text) return null
+
+  if (/^\d+(\.\d+)?$/.test(text)) {
+    return excelSerialToDate(Number(text))
+  }
+
+  const isoCandidate = text.replace(/\//g, '-').replace(' ', 'T')
+  const isoParsed = new Date(isoCandidate)
+  if (!Number.isNaN(isoParsed.getTime())) return isoParsed
+
+  const match = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/)
+  if (!match) return null
+
+  const [, year, month, day, hour = '0', minute = '0', second = '0'] = match
+  const date = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+    Number(second),
+  )
+  if (Number.isNaN(date.getTime())) return null
+  return date
+}
+
+function normalizeSubmitTimeImport(value: unknown) {
+  const parsed = parseImportDate(value)
+  return parsed ? parsed.toISOString() : ''
+}
+
+function normalizeDisplayDateTimeImport(value: unknown) {
+  const text = String(value || '').trim()
+  if (!text) return ''
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(text)) return text
+
+  const parsed = parseImportDate(value)
+  return parsed ? formatShanghaiDateTime(parsed) : text
+}
+
+function describeUnknownError(error: unknown) {
+  if (error instanceof HttpError) return error.message
+  if (error instanceof Error) return error.message
+  if (!error || typeof error !== 'object') return '服务器错误'
+
+  const payload = error as Record<string, unknown>
+  const segments = [
+    payload.message,
+    payload.details,
+    payload.hint,
+    payload.code ? `code=${payload.code}` : '',
+  ]
+    .map(part => String(part || '').trim())
+    .filter(Boolean)
+
+  return segments[0] || '服务器错误'
+}
+
 function normalizeOperationImport(record: unknown) {
   const item = (record && typeof record === 'object') ? record as Record<string, unknown> : {}
   return {
-    submitTime: String(item.submitTime || '').trim(),
+    submitTime: normalizeSubmitTimeImport(item.submitTime),
     itemId: String(item.itemId || '').trim(),
     itemName: String(item.itemName || '').trim(),
     operation: String(item.operation || '').trim(),
     organization: String(item.organization || '').trim(),
     quantity: toPositiveInteger(item.quantity),
-    operationTime: String(item.operationTime || '').trim(),
+    operationTime: normalizeDisplayDateTimeImport(item.operationTime),
     operator: String(item.operator || '').trim(),
     submitter: String(item.submitter || '').trim(),
     operatorOpenid: String(item.operatorOpenid || '').trim(),
@@ -117,7 +210,7 @@ function normalizeInventoryImport(record: unknown) {
     quantity: toPositiveInteger(item.quantity),
     lastOperation: String(item.lastOperation || '').trim(),
     lastOperator: String(item.lastOperator || '').trim(),
-    lastOperationTime: String(item.lastOperationTime || '').trim(),
+    lastOperationTime: normalizeDisplayDateTimeImport(item.lastOperationTime),
     notes: String(item.notes || '').trim(),
   }
 }
@@ -133,6 +226,12 @@ function validateImportedOperations(records: ReturnType<typeof normalizeOperatio
     }
     if (!item.quantity) {
       throw new HttpError(400, `导入失败：操作记录第 ${index + 1} 行数量无效`)
+    }
+    if (item.submitTime && Number.isNaN(new Date(item.submitTime).getTime())) {
+      throw new HttpError(400, `导入失败：操作记录第 ${index + 1} 行提交时间无效`)
+    }
+    if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(item.operationTime)) {
+      throw new HttpError(400, `导入失败：操作记录第 ${index + 1} 行操作时间格式无效`)
     }
   })
 }
@@ -153,6 +252,9 @@ function validateImportedInventory(records: ReturnType<typeof normalizeInventory
     }
     if (mode === 'full' && !item.lastOperator) {
       throw new HttpError(400, `导入失败：库存记录第 ${index + 1} 行缺少最后操作人`)
+    }
+    if (mode === 'full' && item.lastOperationTime && !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(item.lastOperationTime)) {
+      throw new HttpError(400, `导入失败：库存记录第 ${index + 1} 行最后操作时间格式无效`)
     }
   })
 }
@@ -747,7 +849,7 @@ Deno.serve(async req => {
       return fail(error.message, error.status)
     }
 
-    const message = error instanceof Error ? error.message : '服务器错误'
+    const message = describeUnknownError(error)
     return fail(message, 500)
   }
 })
