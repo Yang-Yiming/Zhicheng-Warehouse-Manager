@@ -9,6 +9,7 @@ try {
 const { functionsBaseUrl } = runtimeConfig
 
 const SESSION_STORAGE_KEY = 'wm_session_token'
+const inflightRequests = new Map()
 
 function getSessionToken() {
   try {
@@ -30,6 +31,14 @@ function clearSessionToken() {
   }
 }
 
+function buildRequestKey(name, data, skipAuth, token) {
+  return JSON.stringify({
+    name,
+    data: data || {},
+    auth: skipAuth ? 'skip' : `token:${token || ''}`,
+  })
+}
+
 function callCloud(name, data = {}, options = {}) {
   const { skipAuth = false } = options
   const token = getSessionToken()
@@ -39,7 +48,11 @@ function callCloud(name, data = {}, options = {}) {
     headers.Authorization = `Bearer ${token}`
   }
 
-  return new Promise((resolve, reject) => {
+  const requestKey = buildRequestKey(name, data, skipAuth, token)
+  const cached = inflightRequests.get(requestKey)
+  if (cached) return cached
+
+  const requestPromise = new Promise((resolve, reject) => {
     wx.request({
       url: `${functionsBaseUrl}/${name}`,
       method: 'POST',
@@ -60,6 +73,15 @@ function callCloud(name, data = {}, options = {}) {
       fail: err => reject(new Error((err && err.errMsg) || '网络请求失败')),
     })
   })
+
+  inflightRequests.set(requestKey, requestPromise)
+  requestPromise.finally(() => {
+    if (inflightRequests.get(requestKey) === requestPromise) {
+      inflightRequests.delete(requestKey)
+    }
+  })
+
+  return requestPromise
 }
 
 module.exports = { callCloud, getSessionToken, setSessionToken, clearSessionToken }

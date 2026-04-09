@@ -2,6 +2,7 @@ const app = getApp()
 const { callCloud } = require('../../utils/cloud')
 const { showError, showSuccess } = require('../../utils/feedback')
 const { validateOperation } = require('../../utils/validation')
+const { markPageDirty } = require('../../utils/page-refresh')
 
 const OPERATIONS = ['入库', '出库']
 
@@ -231,6 +232,8 @@ Page({
     try {
       payload.operation = await this._resolveOperation(form.operation, itemId, form.organization)
       await callCloud('operationCreate', payload)
+      markPageDirty('inventory')
+      markPageDirty('operations')
       this.setData({ submitting: false })
       showSuccess('提交成功')
       this._resetForm()

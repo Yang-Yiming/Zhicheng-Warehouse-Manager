@@ -18,8 +18,8 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 ├── miniprogram/
 │   ├── app.js / app.json / app.wxss      # App entry + login orchestration
 │   ├── pages/
-│   │   ├── operations/                    # Operations log list (paginated, searchable) + FAB → blank new form; reloads on onShow
-│   │   ├── inventory/                     # Current inventory list; tap item → action sheet → pre-filled locked form; FAB → pre-filled 入库 form; reloads on onShow
+│   │   ├── operations/                    # Operations log list (paginated, searchable) + FAB → blank new form; rapid page returns reuse a short freshness window instead of reloading on every onShow
+│   │   ├── inventory/                     # Current inventory list; tap item → action sheet → pre-filled locked form; FAB → pre-filled 入库 form; rapid page returns reuse a short freshness window instead of reloading on every onShow
 │   │   ├── operation-form/                # New/pre-filled operation form (URL params: itemId, itemName, organization, operation, locked); locked=1 renders itemId/organization as readonly; segmented control for 入库/出库; itemId blur auto-lookup fills itemName; 出库 requires item existence and enables Max=current stock
 │   │   ├── settings/                      # Role-aware settings: display name + role badge; org management (admin+); user approval/management (admin+); admin promote/demote + chairman transfer (chairman only); Excel export (verified) + xlsx import (chairman)
 │   │   ├── other/                         # Contact page shown from settings "联系" entry; static contact information with one-tap copy buttons (GitHub/email)
@@ -139,6 +139,8 @@ Pages call `app.onLoginReady(cb)` to receive the current user. If login is alrea
 
 Authenticated API requests now resolve session + user identity through SQL helper `get_session_user(token_hash)` in one DB read. Session expiry still uses a sliding 30-day window, but the backend only extends `mini_sessions.expires_at` when the remaining TTL drops below a renewal threshold, avoiding a write on every protected request.
 
+Frontend list refreshes now use a small client-side freshness policy rather than a heavy cache layer: inventory / operations / settings skip automatic `onShow` reloads for a short TTL (~3s) after a successful load, pull-down refresh still forces a request, and successful writes can mark affected pages dirty so the next return refreshes immediately. This includes nested settings flows: `user-orgs-edit` marks `settings-users` dirty before `wx.navigateBack()`, so the member list refreshes immediately even when the return happens inside the freshness window.
+
 ### Creating an Operation
 ```
 User fills form → validate on client → POST /functions/v1/api/operationCreate
@@ -160,6 +162,8 @@ User fills form → validate on client → POST /functions/v1/api/operationCreat
 `inventoryList` now paginates via Postgres `range()` and sorts by `item_id`.
 
 `operationsList` and `inventoryList` no longer issue `count(*)` for every page. They fetch `pageSize + 1` rows and return `hasMore`, which matches the miniprogram's infinite-scroll UX and removes exact-count overhead from hot list endpoints.
+
+`utils/cloud.callCloud(...)` now deduplicates identical in-flight requests (same endpoint + payload + auth context), so concurrent duplicate page loads reuse one active promise instead of sending multiple overlapping network requests.
 
 `operation-form` keeps an in-page cache of `inventoryGet` responses keyed by `itemId + organization`, so repeated blur/submit flows do not re-hit the backend for the same lookup unless the item ID or organization changes.
 

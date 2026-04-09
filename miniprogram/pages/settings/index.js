@@ -9,6 +9,7 @@ const {
   readXlsxFile,
   writeAndShare,
 } = require('../../utils/excel')
+const { clearPageDirty, isPageDirty, shouldRefreshOnShow } = require('../../utils/page-refresh')
 
 const ROLE_LABELS = {
   unverified: '未认证',
@@ -17,6 +18,7 @@ const ROLE_LABELS = {
   superadmin: '超管',
   chairman: '大提督',
 }
+const PAGE_KEY = 'settings-users'
 
 Page({
   data: {
@@ -52,13 +54,15 @@ Page({
         isChairman,
       })
       this._updateAvailable()
-      if (role !== 'unverified') this._loadUsers()
+      if (role !== 'unverified') this._loadUsers({ force: true })
     })
     this._loadConfig()
   },
 
   onShow() {
-    if (this.data.role !== 'unverified') this._loadUsers()
+    if (this.data.role === 'unverified') return
+    if (!shouldRefreshOnShow({ lastLoadedAt: this._usersLoadedAt, dirty: isPageDirty(PAGE_KEY) })) return
+    this._loadUsers({ force: true })
   },
 
   _loadConfig() {
@@ -73,13 +77,21 @@ Page({
       .catch(() => showError('配置加载失败'))
   },
 
-  _loadUsers() {
+  _loadUsers(options = {}) {
+    const { force = false } = options
+    if (this._loadingUsers) return this._usersLoadPromise
+    if (!force && !shouldRefreshOnShow({ lastLoadedAt: this._usersLoadedAt, dirty: isPageDirty(PAGE_KEY) })) {
+      return Promise.resolve()
+    }
+
     const memberRoles = ['normal', 'admin', 'superadmin', 'chairman']
     const promises = [callCloud('userList', { roles: memberRoles })]
     if (this.data.isAdmin) {
       promises.push(callCloud('userList', { roles: ['unverified'] }))
     }
-    Promise.all(promises)
+
+    this._loadingUsers = true
+    this._usersLoadPromise = Promise.all(promises)
       .then(([membersResult, unverifiedResult]) => {
         const members = (membersResult.data || []).map(u => ({
           ...u,
@@ -89,8 +101,16 @@ Page({
           allMembers: members,
           unverifiedUsers: unverifiedResult ? (unverifiedResult.data || []) : [],
         })
+        this._usersLoadedAt = Date.now()
+        clearPageDirty(PAGE_KEY)
       })
       .catch(() => showError('用户列表加载失败'))
+      .finally(() => {
+        this._loadingUsers = false
+        this._usersLoadPromise = null
+      })
+
+    return this._usersLoadPromise
   },
 
   _updateAvailable() {
@@ -171,14 +191,14 @@ Page({
   onApproveUser(e) {
     const { openid } = e.currentTarget.dataset
     callCloud('userSetRole', { targetOpenid: openid, newRole: 'normal' })
-      .then(() => { showSuccess('已通过'); this._loadUsers() })
+      .then(() => { showSuccess('已通过'); this._loadUsers({ force: true }) })
       .catch(err => showError(err.message || '操作失败'))
   },
 
   onDismissUser(e) {
     const { openid } = e.currentTarget.dataset
     callCloud('userSetRole', { targetOpenid: openid, newRole: 'dismissed' })
-      .then(() => { showSuccess('已忽略'); this._loadUsers() })
+      .then(() => { showSuccess('已忽略'); this._loadUsers({ force: true }) })
       .catch(err => showError(err.message || '操作失败'))
   },
 
@@ -195,7 +215,7 @@ Page({
       success: (res) => {
         if (!res.confirm) return
         callCloud('userSetRole', { targetOpenid: openid, newRole: 'admin' })
-          .then(() => { showSuccess('已提拔'); this._loadUsers() })
+          .then(() => { showSuccess('已提拔'); this._loadUsers({ force: true }) })
           .catch(err => showError(err.message || '操作失败'))
       }
     })
@@ -209,7 +229,7 @@ Page({
       success: (res) => {
         if (!res.confirm) return
         callCloud('userSetRole', { targetOpenid: openid, newRole: 'normal' })
-          .then(() => { showSuccess('已降级'); this._loadUsers() })
+          .then(() => { showSuccess('已降级'); this._loadUsers({ force: true }) })
           .catch(err => showError(err.message || '操作失败'))
       }
     })
@@ -227,7 +247,7 @@ Page({
             showSuccess('已转让')
             app.globalData.currentUser.role = 'admin'
             this.setData({ role: 'admin', roleLabel: '管理员', isChairman: false })
-            this._loadUsers()
+            this._loadUsers({ force: true })
           })
           .catch(err => showError(err.message || '操作失败'))
       }

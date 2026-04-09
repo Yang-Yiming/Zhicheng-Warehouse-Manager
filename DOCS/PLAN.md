@@ -226,6 +226,10 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 - [x] Change session sliding renewal to threshold-based renewal instead of updating on every request
 - [x] Add inventory lookup indexes for `(item_id, organization, updated_at)` and `(item_id, updated_at)`
 - [x] Cache operation-form `inventoryGet` lookups in-page to avoid repeated requests for the same item/org
+- [x] Deduplicate identical in-flight frontend requests in `utils/cloud.callCloud(...)`
+- [x] Add short `onShow` freshness windows for inventory / operations / settings user-list reloads, while keeping pull-down refresh forced
+- [x] Mark inventory / operations pages dirty after successful operation creation so the next return bypasses the freshness window
+- [x] Mark settings user list dirty after saving nested user-org edits so `wx.navigateBack()` bypasses the freshness window
 - [x] Add Supabase `dataImport` endpoint covering current miniprogram export format and old single-sheet inventory format
 - [x] Add transactional SQL import helper to replace `operations` / `inventory` data in one database function call
 - [x] Keep xlsx parsing/building on the miniprogram side via existing `utils/excel.js`

@@ -1,6 +1,7 @@
 const app = getApp()
 const { callCloud } = require('../../utils/cloud')
 const { showError, showSuccess } = require('../../utils/feedback')
+const { markPageDirty } = require('../../utils/page-refresh')
 
 Page({
   data: {
@@ -65,6 +66,7 @@ Page({
       organizations: this.data.userOrgs,
     }).then(() => {
       this.setData({ saving: false })
+      markPageDirty('settings-users')
       showSuccess('保存成功')
       wx.navigateBack()
     }).catch(err => {
