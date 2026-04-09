@@ -36,9 +36,9 @@ Page({
     this.setData({ loading: true })
 
     getInventory(page, 20)
-      .then(({ data, total }) => {
+      .then(({ data, hasMore }) => {
         const inventory = reset ? data : [...this.data.inventory, ...data]
-        this.setData({ inventory, page: page + 1, hasMore: inventory.length < total, loading: false })
+        this.setData({ inventory, page: page + 1, hasMore: !!hasMore, loading: false })
         this._loaded = true
         this._applyFilter()
         if (reset) wx.stopPullDownRefresh()

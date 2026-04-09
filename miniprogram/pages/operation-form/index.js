@@ -22,6 +22,41 @@ Page({
     OPERATIONS,
   },
 
+  _getLookupCacheKey(itemId, organization) {
+    return `${String(itemId || '').trim()}::${String(organization || '').trim()}`
+  },
+
+  _getLookupCacheEntry(itemId, organization) {
+    const cache = this._inventoryLookupCache || {}
+    return cache[this._getLookupCacheKey(itemId, organization)] || null
+  },
+
+  async _fetchInventoryLookup(itemId, organization) {
+    const key = this._getLookupCacheKey(itemId, organization)
+    this._inventoryLookupCache = this._inventoryLookupCache || {}
+
+    if (this._inventoryLookupCache[key]) {
+      return this._inventoryLookupCache[key]
+    }
+
+    const lookupPromise = callCloud('inventoryGet', {
+      itemId,
+      organization: organization || undefined,
+    }).then(res => ({
+      found: !!res.found,
+      data: res.data || null,
+    }))
+
+    this._inventoryLookupCache[key] = lookupPromise
+
+    try {
+      return await lookupPromise
+    } catch (error) {
+      delete this._inventoryLookupCache[key]
+      throw error
+    }
+  },
+
   onLoad(options) {
     const { itemId, itemName, organization, operation, locked } = options
     const isLocked = locked === '1'
@@ -66,6 +101,7 @@ Page({
 
   onItemIdInput(e) {
     // reset lookup state on every keystroke so stale results don't linger
+    this._inventoryLookupCache = {}
     this.setData({ 'form.itemId': e.detail.value, itemFound: false, itemIdError: '', maxQuantity: null })
   },
   onItemIdBlur() { this._syncItemById() },
@@ -96,6 +132,7 @@ Page({
 
   onOrgChange(e) {
     const idx = Number(e.detail.value)
+    this._inventoryLookupCache = {}
     this.setData({ orgIndex: idx, 'form.organization': this.data.organizations[idx] })
     this._syncItemById()
   },
@@ -133,10 +170,7 @@ Page({
     const seq = this._lookupSeq
 
     try {
-      const res = await callCloud('inventoryGet', {
-        itemId,
-        organization: isOutbound ? form.organization : undefined,
-      })
+      const res = await this._fetchInventoryLookup(itemId, isOutbound ? form.organization : '')
       if (seq !== this._lookupSeq) return
 
       if (res.found && res.data) {
@@ -165,7 +199,10 @@ Page({
 
   async _resolveOperation(userOp, itemId, organization) {
     if (userOp === '出库') return '部分出库'
-    const res = await callCloud('inventoryGet', { itemId, organization })
+    const cacheEntry = this._getLookupCacheEntry(itemId, organization)
+    const res = cacheEntry
+      ? await cacheEntry
+      : await this._fetchInventoryLookup(itemId, organization)
     return res.found ? '物资增添' : '入库'
   },
 
@@ -204,6 +241,7 @@ Page({
   },
 
   _resetForm() {
+    this._inventoryLookupCache = {}
     this._initDateTime()
     this.setData({
       'form.itemId': '', 'form.itemName': '', 'form.operation': '',

@@ -137,6 +137,8 @@ onLaunch → wx.login() → POST /functions/v1/api/userLogin
 
 Pages call `app.onLoginReady(cb)` to receive the current user. If login is already complete the callback fires immediately; otherwise it is queued.
 
+Authenticated API requests now resolve session + user identity through SQL helper `get_session_user(token_hash)` in one DB read. Session expiry still uses a sliding 30-day window, but the backend only extends `mini_sessions.expires_at` when the remaining TTL drops below a renewal threshold, avoiding a write on every protected request.
+
 ### Creating an Operation
 ```
 User fills form → validate on client → POST /functions/v1/api/operationCreate
@@ -156,6 +158,10 @@ User fills form → validate on client → POST /functions/v1/api/operationCreat
   - `入库`: item name is editable until itemId lookup hits existing inventory; after hit it becomes readonly
 
 `inventoryList` now paginates via Postgres `range()` and sorts by `item_id`.
+
+`operationsList` and `inventoryList` no longer issue `count(*)` for every page. They fetch `pageSize + 1` rows and return `hasMore`, which matches the miniprogram's infinite-scroll UX and removes exact-count overhead from hot list endpoints.
+
+`operation-form` keeps an in-page cache of `inventoryGet` responses keyed by `itemId + organization`, so repeated blur/submit flows do not re-hit the backend for the same lookup unless the item ID or organization changes.
 
 ### Data Export/Import
 

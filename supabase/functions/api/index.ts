@@ -21,6 +21,7 @@ const DEFAULT_ORGANIZATIONS = [
 const ADMIN_ROLES = ['admin', 'superadmin', 'chairman']
 const VERIFIED_ROLES = ['normal', 'admin', 'superadmin', 'chairman']
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
+const SESSION_RENEW_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000
 const EXPORT_PAGE_SIZE = 1000
 
 class HttpError extends Error {
@@ -352,32 +353,37 @@ async function requireUser(req: Request, supabase: ReturnType<typeof getAdminCli
   if (!token) throw new HttpError(401, '登录已失效，请重新进入小程序')
 
   const tokenHash = await sha256(token)
-  const { data: session, error: sessionError } = await supabase
-    .from('mini_sessions')
-    .select('openid, expires_at')
-    .eq('token_hash', tokenHash)
-    .maybeSingle()
+  const { data: session, error: sessionError } = await supabase.rpc('get_session_user', {
+    p_token_hash: tokenHash,
+  })
 
   if (sessionError) throw sessionError
-  if (!session) throw new HttpError(401, '登录已失效，请重新进入小程序')
-  if (new Date(String(session.expires_at)).getTime() <= Date.now()) {
+  const sessionRow = Array.isArray(session) ? session[0] : session
+  if (!sessionRow) throw new HttpError(401, '登录已失效，请重新进入小程序')
+
+  const expiresAt = new Date(String(sessionRow.expires_at)).getTime()
+  if (expiresAt <= Date.now()) {
     await supabase.from('mini_sessions').delete().eq('token_hash', tokenHash)
     throw new HttpError(401, '登录已过期，请重新进入小程序')
   }
 
-  const { data: user, error: userError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('openid', session.openid)
-    .maybeSingle()
-
-  if (userError) throw userError
+  const user = {
+    openid: sessionRow.openid,
+    display_name: sessionRow.display_name,
+    organizations: sessionRow.organizations,
+    role: sessionRow.role,
+    dismissed: sessionRow.dismissed,
+    created_at: sessionRow.created_at,
+    updated_at: sessionRow.updated_at,
+  }
   if (!user) throw new HttpError(401, '用户不存在，请重新登录')
 
-  await supabase
-    .from('mini_sessions')
-    .update({ expires_at: new Date(Date.now() + SESSION_TTL_MS).toISOString(), updated_at: nowIso() })
-    .eq('token_hash', tokenHash)
+  if ((expiresAt - Date.now()) <= SESSION_RENEW_THRESHOLD_MS) {
+    await supabase
+      .from('mini_sessions')
+      .update({ expires_at: new Date(Date.now() + SESSION_TTL_MS).toISOString(), updated_at: nowIso() })
+      .eq('token_hash', tokenHash)
+  }
 
   return { user }
 }
@@ -509,19 +515,22 @@ async function handleOperationsList(req: Request, body: Record<string, unknown>,
   const page = Math.max(1, Number(body.page) || 1)
   const pageSize = Math.max(1, Math.min(100, Number(body.pageSize) || 20))
   const from = (page - 1) * pageSize
-  const to = from + pageSize - 1
+  const to = from + pageSize
 
-  const [{ count, error: countError }, { data, error: listError }] = await Promise.all([
-    supabase.from('operations').select('id', { count: 'exact', head: true }),
-    supabase.from('operations').select('*').order('submit_time', { ascending: false }).range(from, to),
-  ])
+  const { data, error: listError } = await supabase
+    .from('operations')
+    .select('*')
+    .order('submit_time', { ascending: false })
+    .range(from, to)
 
-  if (countError) throw countError
   if (listError) throw listError
 
+  const rows = Array.isArray(data) ? data : []
+  const hasMore = rows.length > pageSize
+
   return ok({
-    data: (data || []).map(formatOperation),
-    total: count || 0,
+    data: rows.slice(0, pageSize).map(formatOperation),
+    hasMore,
     page,
     pageSize,
   })
@@ -534,19 +543,22 @@ async function handleInventoryList(req: Request, body: Record<string, unknown>, 
   const page = Math.max(1, Number(body.page) || 1)
   const pageSize = Math.max(1, Math.min(100, Number(body.pageSize) || 20))
   const from = (page - 1) * pageSize
-  const to = from + pageSize - 1
+  const to = from + pageSize
 
-  const [{ count, error: countError }, { data, error: listError }] = await Promise.all([
-    supabase.from('inventory').select('id', { count: 'exact', head: true }),
-    supabase.from('inventory').select('*').order('item_id', { ascending: true }).range(from, to),
-  ])
+  const { data, error: listError } = await supabase
+    .from('inventory')
+    .select('*')
+    .order('item_id', { ascending: true })
+    .range(from, to)
 
-  if (countError) throw countError
   if (listError) throw listError
 
+  const rows = Array.isArray(data) ? data : []
+  const hasMore = rows.length > pageSize
+
   return ok({
-    data: (data || []).map(formatInventory),
-    total: count || 0,
+    data: rows.slice(0, pageSize).map(formatInventory),
+    hasMore,
     page,
     pageSize,
   })

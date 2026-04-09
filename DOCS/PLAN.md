@@ -218,6 +218,14 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 - [x] Restore settings-page Excel export entry for verified users on the Supabase runtime
 - [x] Restore settings-page xlsx import entry for chairman only, with overwrite confirmation
 - [x] Add Supabase `dataExport` endpoint returning full operations + inventory payload for frontend workbook generation
+
+## Phase 7.3: Request/Access Pattern Optimization ✓
+
+- [x] Replace exact-count pagination in `operationsList` / `inventoryList` with `hasMore` probing to reduce list query cost
+- [x] Add `get_session_user` SQL helper so authenticated requests fetch session + user in one database round-trip
+- [x] Change session sliding renewal to threshold-based renewal instead of updating on every request
+- [x] Add inventory lookup indexes for `(item_id, organization, updated_at)` and `(item_id, updated_at)`
+- [x] Cache operation-form `inventoryGet` lookups in-page to avoid repeated requests for the same item/org
 - [x] Add Supabase `dataImport` endpoint covering current miniprogram export format and old single-sheet inventory format
 - [x] Add transactional SQL import helper to replace `operations` / `inventory` data in one database function call
 - [x] Keep xlsx parsing/building on the miniprogram side via existing `utils/excel.js`
