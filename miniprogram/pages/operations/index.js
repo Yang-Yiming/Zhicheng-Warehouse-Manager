@@ -14,15 +14,12 @@ Page({
     loading: false,
     page: 1,
     hasMore: true,
-    unauthorized: false,
+    readonly: false,
   },
 
   onLoad() {
     app.onLoginReady(user => {
-      if ((user.role || 'unverified') === 'unverified') {
-        this.setData({ unauthorized: true })
-        return
-      }
+      this.setData({ readonly: (user.role || 'unverified') === 'unverified' })
       this._load(true, { force: true })
     })
   },
@@ -85,6 +82,7 @@ Page({
   },
 
   onAddNew() {
+    if (this.data.readonly) return
     wx.navigateTo({ url: '/pages/operation-form/index' })
   },
 })

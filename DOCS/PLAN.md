@@ -239,8 +239,9 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 ## Phase 7.4: Unverified Inventory Read-Only Access ✓
 
 - [x] Relax `inventoryList` so unverified users can read current inventory
-- [x] Keep `operationCreate` / `inventoryGet` / `operationsList` restricted, preserving no-edit behavior for unverified users
-- [x] Update inventory page so unverified users can browse stock but cannot tap into operation actions or use the add-entry FAB
+- [x] Relax `operationsList` so unverified users can read operation history
+- [x] Keep `operationCreate` / `inventoryGet` restricted, preserving no-edit behavior for unverified users
+- [x] Update inventory and operations pages so unverified users can browse data but cannot use add-entry or edit flows
 
 ## Phase 7.2.1: Excel Import Robustness ✓
 
