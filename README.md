@@ -15,10 +15,10 @@ All users are uniquely bound to a single WeChat account. Every inbound and outbo
 ### User Permissions  
 (Higher-level roles inherit all permissions of lower-level roles.)
 
-1. **Unauthorized**: Could only read the inventory list.
+1. **Unauthorized**: Cannot view any information.  
 2. **User**: Can perform inbound and outbound operations, view the user list, and view their own organization.  
 3. **Admin**: Can approve *unauthorized* users to become *users*, and can edit the organization of *users*.  
-4. **Grand Admiral**: Can promote *users* to *admins* or demote *admins* to *users*. Can transfer the *president* role to an *admin*.
+4. **President**: Can promote *users* to *admins* or demote *admins* to *users*. Can transfer the *president* role to an *admin*.
 
 ## Operation Types
 
@@ -47,7 +47,7 @@ Miniprogram QR-code: Haven't Published
 ### 用户权限
 （高等级拥有低等级所有权限）
 
-1. **未认证**: 仅可看当前库存。
+1. **未认证**: 无法查看任何信息
 2. **普通**: 可以进行入库、出库操作，可以查看人员列表，可以查看自己所属组织
 3. **管理员**: 可以批准 _未认证_ 用户为 _普通_ 用户，可以编辑 _普通_ 用户的所属组织
 4. **大提督**: 可以提拔 _普通_ 用户为 _管理员_ 或降级 _管理员_ 为 _普通_ 用户。可以将 _大提督_ 身份转移给 _管理员_ 。
