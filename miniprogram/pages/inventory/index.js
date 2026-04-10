@@ -14,15 +14,12 @@ Page({
     loading: false,
     page: 1,
     hasMore: true,
-    unauthorized: false,
+    readonly: false,
   },
 
   onLoad() {
     app.onLoginReady(user => {
-      if ((user.role || 'unverified') === 'unverified') {
-        this.setData({ unauthorized: true })
-        return
-      }
+      this.setData({ readonly: (user.role || 'unverified') === 'unverified' })
       this._load(true, { force: true })
     })
   },
@@ -78,6 +75,7 @@ Page({
   },
 
   onItemTap(e) {
+    if (this.data.readonly) return
     const item = e.currentTarget.dataset.item
     wx.showActionSheet({
       itemList: ['入库', '出库'],
@@ -92,6 +90,7 @@ Page({
   },
 
   onAddNew() {
+    if (this.data.readonly) return
     wx.navigateTo({ url: '/pages/operation-form/index?operation=%E5%85%A5%E5%BA%93' })
   },
 })

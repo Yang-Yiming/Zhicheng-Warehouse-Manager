@@ -19,7 +19,7 @@ Configuration note: WeChat DevTools reads `project.config.json` directly and doe
 │   ├── app.js / app.json / app.wxss      # App entry + login orchestration
 │   ├── pages/
 │   │   ├── operations/                    # Operations log list (paginated, searchable) + FAB → blank new form; rapid page returns reuse a short freshness window instead of reloading on every onShow
-│   │   ├── inventory/                     # Current inventory list; tap item → action sheet → pre-filled locked form; FAB → pre-filled 入库 form; rapid page returns reuse a short freshness window instead of reloading on every onShow
+│   │   ├── inventory/                     # Current inventory list; verified users can tap item → action sheet → pre-filled locked form and use FAB → pre-filled 入库 form; unverified users see the same inventory in read-only mode; rapid page returns reuse a short freshness window instead of reloading on every onShow
 │   │   ├── operation-form/                # New/pre-filled operation form (URL params: itemId, itemName, organization, operation, locked); locked=1 renders itemId/organization as readonly; segmented control for 入库/出库; itemId blur auto-lookup fills itemName; 出库 requires item existence and enables Max=current stock
 │   │   ├── settings/                      # Role-aware settings: display name + role badge; org management (admin+); user approval/management (admin+); admin promote/demote + chairman transfer (chairman only); Excel export (verified) + xlsx import (chairman)
 │   │   ├── other/                         # Contact page shown from settings "联系" entry; static contact information with one-tap copy buttons (GitHub/email)
@@ -159,7 +159,7 @@ User fills form → validate on client → POST /functions/v1/api/operationCreat
   - `出库`: item name input is readonly
   - `入库`: item name is editable until itemId lookup hits existing inventory; after hit it becomes readonly
 
-`inventoryList` now paginates via Postgres `range()` and sorts by `item_id`.
+`inventoryList` now paginates via Postgres `range()` and sorts by `item_id`. Unlike operation creation/history endpoints, it is readable by any logged-in user, including `unverified`, so new applicants can browse current stock in read-only mode.
 
 `operationsList` and `inventoryList` no longer issue `count(*)` for every page. They fetch `pageSize + 1` rows and return `hasMore`, which matches the miniprogram's infinite-scroll UX and removes exact-count overhead from hot list endpoints.
 

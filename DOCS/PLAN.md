@@ -236,6 +236,12 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 - [x] Paginate `dataExport` reads so large warehouses are exported completely beyond Supabase's default row cap
 - [x] Include `operatorOpenid` in the exported workbook so full export/import round-trips preserve operation audit identity
 
+## Phase 7.4: Unverified Inventory Read-Only Access ✓
+
+- [x] Relax `inventoryList` so unverified users can read current inventory
+- [x] Keep `operationCreate` / `inventoryGet` / `operationsList` restricted, preserving no-edit behavior for unverified users
+- [x] Update inventory page so unverified users can browse stock but cannot tap into operation actions or use the add-entry FAB
+
 ## Phase 7.2.1: Excel Import Robustness ✓
 
 - [x] Normalize imported time fields in Supabase `dataImport`, accepting Excel serial dates and common spreadsheet date strings

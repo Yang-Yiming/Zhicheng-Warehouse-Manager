@@ -1,9 +1,4 @@
 <view class="page">
-  <view wx:if="{{unauthorized}}" class="unauthorized-tip">
-    <text class="unauthorized-icon">🔒</text>
-    <text class="unauthorized-text">请联系管理员授权后使用</text>
-  </view>
-  <block wx:else>
   <view class="search-bar">
     <input class="search-input" placeholder="搜索物资、组织..." value="{{searchText}}" bindinput="onSearch" />
   </view>
@@ -34,6 +29,5 @@
     <view wx:elif="{{filtered.length === 0 && !loading}}" class="tip">暂无库存</view>
   </view>
 
-  <view class="fab" bindtap="onAddNew">＋</view>
-  </block>
+  <view wx:if="{{!readonly}}" class="fab" bindtap="onAddNew">＋</view>
 </view>
