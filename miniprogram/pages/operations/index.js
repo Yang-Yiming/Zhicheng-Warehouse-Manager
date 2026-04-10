@@ -12,6 +12,7 @@ Page({
     filtered: [],
     searchText: '',
     loading: false,
+    loaded: false,
     page: 1,
     hasMore: true,
     readonly: false,
@@ -51,7 +52,7 @@ Page({
         const opClassMap = { '入库': 'in', '出库': 'out', '物资增添': 'add', '部分出库': 'partial' }
         const mapped = data.map(op => ({ ...op, opClass: opClassMap[op.operation] || 'other' }))
         const operations = reset ? mapped : [...this.data.operations, ...mapped]
-        this.setData({ operations, page: page + 1, hasMore: !!hasMore, loading: false })
+        this.setData({ operations, page: page + 1, hasMore: !!hasMore, loading: false, loaded: true })
         this._loaded = true
         if (reset) {
           this._lastLoadedAt = Date.now()
@@ -61,7 +62,7 @@ Page({
         if (reset) wx.stopPullDownRefresh()
       })
       .catch(() => {
-        this.setData({ loading: false })
+        this.setData({ loading: false, loaded: true })
         if (reset) wx.stopPullDownRefresh()
         showError('加载失败')
       })

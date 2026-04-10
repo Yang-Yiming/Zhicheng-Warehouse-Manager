@@ -243,6 +243,14 @@ Migration of the old Python Tkinter warehouse management app to a WeChat minipro
 - [x] Keep `operationCreate` / `inventoryGet` restricted, preserving no-edit behavior for unverified users
 - [x] Update inventory and operations pages so unverified users can browse data but cannot use add-entry or edit flows
 
+## Phase 7.5: Initial List Loading State Fix ✓
+
+- [x] Delay operations/inventory empty-state copy until the first list request finishes, so first-open shows loading instead of a misleading empty state
+
+## Phase 7.6: Unverified Settings Notice ✓
+
+- [x] Show an inline settings notice for unverified users: "出入库权限请联系部门负责人"
+
 ## Phase 7.2.1: Excel Import Robustness ✓
 
 - [x] Normalize imported time fields in Supabase `dataImport`, accepting Excel serial dates and common spreadsheet date strings

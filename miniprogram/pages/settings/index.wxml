@@ -18,6 +18,9 @@
       <text class="label">身份</text>
       <view class="role-badge role-{{role}}"><text>{{roleLabel}}</text></view>
     </view>
+    <view wx:if="{{role === 'unverified'}}" class="notice-row">
+      <text class="notice-text">出入库权限请联系部门负责人</text>
+    </view>
   </view>
 
   <!-- 所属组织 (非未认证) -->
